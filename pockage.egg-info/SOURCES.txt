@@ -1,0 +1,11 @@
+LICENSE
+README.md
+setup.py
+pockage/__init__.py
+pockage/cli.py
+pockage.egg-info/PKG-INFO
+pockage.egg-info/SOURCES.txt
+pockage.egg-info/dependency_links.txt
+pockage.egg-info/entry_points.txt
+pockage.egg-info/requires.txt
+pockage.egg-info/top_level.txt

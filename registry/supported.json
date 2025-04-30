@@ -1,0 +1,149 @@
+{
+    "sdl2": {
+      "name": "SDL2",
+      "latest_version": "2.28.5",
+      "versions": {
+        "2.28.5": {
+          "url_windows": "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-devel-2.28.5-VC.zip",
+          "url_macos": "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5.dmg",
+          "url_linux": "https://github.com/libsdl-org/SDL/releases/download/release-2.28.5/SDL2-2.28.5.tar.gz"
+        }
+      },
+      "description": "Cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL.",
+      "license": "zlib"
+    },
+    "imgui": {
+      "name": "Dear ImGui",
+      "latest_version": "1.89.9",
+      "versions": {
+        "1.89.9": {
+          "url_all": "https://github.com/ocornut/imgui/archive/refs/tags/v1.89.9.zip"
+        }
+      },
+      "description": "Bloat-free Graphical User interface for C++ with minimal dependencies.",
+      "license": "MIT"
+    },
+    "freetype": {
+      "name": "FreeType",
+      "latest_version": "2.13.2",
+      "versions": {
+        "2.13.2": {
+          "url_all": "https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz"
+        }
+      },
+      "description": "A freely available software library to render fonts.",
+      "license": "FreeType License / GPL"
+    },
+    "sfml": {
+        "name": "SFML",
+        "latest_version": "2.6.1",
+        "versions": {
+            "2.6.1": {
+                "url_windows": "https://github.com/SFML/SFML/releases/download/2.6.1/SFML-2.6.1-windows-vc17-64-bit.zip",
+                "url_macos": "https://github.com/SFML/SFML/releases/download/2.6.1/SFML-2.6.1-macOS-clang.tar.gz",
+                "url_linux": "https://github.com/SFML/SFML/releases/download/2.6.1/SFML-2.6.1-linux-gcc-64-bit.tar.gz"
+            }
+        },
+        "description": "Simple and Fast Multimedia Library for games and multimedia applications.",
+        "license": "zlib"
+    },
+    "glfw": {
+        "name": "GLFW",
+        "latest_version": "3.4.0",
+        "versions": {
+            "3.4.0": {
+                "url_all": "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip"
+            }
+        },
+        "description": "Multi-platform library for OpenGL and Vulkan development.",
+        "license": "zlib/libpng"
+    },
+    "bullet": {
+        "name": "Bullet Physics",
+        "latest_version": "3.25",
+        "versions": {
+            "3.25": {
+                "url_all": "https://github.com/bulletphysics/bullet3/archive/refs/tags/3.25.zip"
+            }
+        },
+        "description": "Real-time collision detection and multi-physics simulation.",
+        "license": "zlib"
+    },
+    "assimp": {
+        "name": "Assimp",
+        "latest_version": "5.3.1",
+        "versions": {
+            "5.3.1": {
+                "url_all": "https://github.com/assimp/assimp/archive/refs/tags/v5.3.1.zip"
+            }
+        },
+        "description": "Open Asset Import Library for loading 3D models in various formats.",
+        "license": "BSD"
+    },
+    "openal": {
+        "name": "OpenAL Soft",
+        "latest_version": "1.23.1",
+        "versions": {
+            "1.23.1": {
+                "url_all": "https://github.com/kcat/openal-soft/archive/refs/tags/1.23.1.zip"
+            }
+        },
+        "description": "Cross-platform 3D audio library.",
+        "license": "LGPL"
+    },
+    "box2d": {
+        "name": "Box2D",
+        "latest_version": "2.4.1",
+        "versions": {
+            "2.4.1": {
+                "url_all": "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.1.zip"
+            }
+        },
+        "description": "2D physics engine for games.",
+        "license": "MIT"
+    },
+    "rapidjson": {
+        "name": "RapidJSON",
+        "latest_version": "1.1.0",
+        "versions": {
+            "1.1.0": {
+                "url_all": "https://github.com/Tencent/rapidjson/archive/refs/tags/v1.1.0.zip"
+            }
+        },
+        "description": "Fast JSON parser/generator for C++.",
+        "license": "MIT"
+    },
+    "fmt": {
+        "name": "fmt",
+        "latest_version": "10.2.1",
+        "versions": {
+            "10.2.1": {
+                "url_all": "https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.zip"
+            }
+        },
+        "description": "Modern formatting library for C++.",
+        "license": "MIT"
+    },
+    "spdlog": {
+        "name": "spdlog",
+        "latest_version": "1.13.0",
+        "versions": {
+            "1.13.0": {
+                "url_all": "https://github.com/gabime/spdlog/archive/refs/tags/v1.13.0.zip"
+            }
+        },
+        "description": "Fast C++ logging library.",
+        "license": "MIT"
+    },
+    "entt": {
+        "name": "EnTT",
+        "latest_version": "3.13.1",
+        "versions": {
+            "3.13.1": {
+                "url_all": "https://github.com/skypjack/entt/archive/refs/tags/v3.13.1.zip"
+            }
+        },
+        "description": "Entity component system (ECS) and game engine written in modern C++.",
+        "license": "MIT"
+    }
+  }
