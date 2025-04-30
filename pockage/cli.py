@@ -1803,6 +1803,122 @@ int main(int argc, char* argv[]) {
         for lib in self.config["dependencies"]:
             self._install_library(lib)
         logger.info("All dependencies updated")
+        
+    def dev_build(self, no_minify=False, output_dir="dist", create_archive=False, version=None):
+        """Build the code for release with minification."""
+        logger = NauticalLogger("pockage")
+        logger.info(f"Preparing to build release version", animate=True)
+        
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # First, build the project
+        logger.info("Building project...", animate=True)
+        self.build()
+        
+        # Determine version
+        if not version and self.config and "version" in self.config:
+            version = self.config["version"]
+        if not version:
+            version = datetime.datetime.now().strftime("%Y.%m.%d")
+            
+        logger.info(f"Preparing release version {version}", animate=True)
+        
+        # Copy necessary files to output directory
+        logger.info("Copying files to distribution directory...", animate=True)
+        
+        # Copy Python files
+        python_files = []
+        for root, _, files in os.walk("pockage"):
+            for file in files:
+                if file.endswith(".py"):
+                    src_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(src_path, ".")
+                    dst_path = output_path / rel_path
+                    dst_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Copy and potentially minify
+                    if not no_minify and file.endswith(".py"):
+                        with open(src_path, "r") as src_file:
+                            content = src_file.read()
+                            
+                        # Simple minification: remove comments and excessive whitespace
+                        # This is a basic implementation - for production, consider using a proper Python minifier
+                        minified_content = self._minify_python(content)
+                        
+                        with open(dst_path, "w") as dst_file:
+                            dst_file.write(minified_content)
+                            
+                        python_files.append(rel_path)
+                    else:
+                        shutil.copy2(src_path, dst_path)
+        
+        # Copy essential non-Python files
+        essential_files = ["setup.py", "README.md", "LICENSE", "CONTRIBUTING.md"]
+        for file in essential_files:
+            if os.path.exists(file):
+                shutil.copy2(file, output_path / file)
+        
+        # Copy templates directory
+        if os.path.exists("pockage/templates"):
+            shutil.copytree("pockage/templates", output_path / "pockage/templates", dirs_exist_ok=True)
+        
+        # Create a manifest file with version info
+        manifest = {
+            "name": "pockage",
+            "version": version,
+            "build_date": datetime.datetime.now().isoformat(),
+            "python_files": python_files,
+        }
+        
+        with open(output_path / "manifest.json", "w") as f:
+            json.dump(manifest, f, indent=2)
+        
+        logger.info(f"Release build created in {output_dir}", animate=False)
+        
+        # Create archive if requested
+        if create_archive:
+            archive_name = f"pockage-{version}"
+            archive_path = f"{archive_name}.tar.gz"
+            
+            logger.info(f"Creating release archive: {archive_path}", animate=True)
+            
+            # Create a tarball
+            with tarfile.open(archive_path, "w:gz") as tar:
+                tar.add(output_dir, arcname=archive_name)
+                
+            # Calculate SHA256 hash
+            sha256_hash = hashlib.sha256()
+            with open(archive_path, "rb") as f:
+                for byte_block in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            sha256_digest = sha256_hash.hexdigest()
+            
+            # Write hash to file
+            with open(f"{archive_path}.sha256", "w") as f:
+                f.write(f"{sha256_digest}  {archive_path}\n")
+                
+            logger.info(f"Release archive created: {archive_path}", animate=False)
+            logger.info(f"SHA256: {sha256_digest}", animate=False)
+            
+        logger.info(f"🚢📦 Release build complete! Version: {version}", animate=False)
+        
+    def _minify_python(self, content):
+        """Basic Python minification."""
+        # Remove comments
+        content = re.sub(r'#.*$', '', content, flags=re.MULTILINE)
+        
+        # Remove docstrings (simple approach - not perfect for all cases)
+        content = re.sub(r'"""[^"]*"""', '', content, flags=re.DOTALL)
+        content = re.sub(r"'''[^']*'''", '', content, flags=re.DOTALL)
+        
+        # Remove empty lines and leading/trailing whitespace
+        lines = [line.strip() for line in content.split('\n')]
+        lines = [line for line in lines if line]
+        
+        # Join lines back together
+        return '\n'.join(lines)
 
 def main():
     # Handle special command formats like new@gui
@@ -1844,6 +1960,12 @@ def main():
     build_parser = subparsers.add_parser("build", help="Build the project")
     build_parser.add_argument("platform", nargs="?", help="Specific platform to build for (macos, windows, linux, ios, android)")
     
+    # Dev commands
+    dev_parser = subparsers.add_parser("dev:build", help="Build the code for release with minification")
+    dev_parser.add_argument("--no-minify", action="store_true", help="Skip minification step")
+    dev_parser.add_argument("--output-dir", default="dist", help="Output directory for the release build")
+    dev_parser.add_argument("--create-archive", action="store_true", help="Create a release archive")
+    dev_parser.add_argument("--version", help="Version tag for the release")
 
     # Run command
     subparsers.add_parser("run", help="Run the project")
@@ -1925,6 +2047,8 @@ def main():
         pockage.scan(args.scan_dir, args.scan_depth)
     elif args.command == "version":
         pockage.version()
+    elif args.command == "dev:build":
+        pockage.dev_build(args.no_minify, args.output_dir, args.create_archive, args.version)
     else:
         parser.print_help()
 
