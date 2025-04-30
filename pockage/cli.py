@@ -919,6 +919,8 @@ int main(int argc, char* argv[]) {
             # Create directory structure
             frameworks_path.mkdir(parents=True, exist_ok=True)
             macos_path.mkdir(parents=True, exist_ok=True)
+            resources_path = app_bundle_path / "Contents" / "Resources"
+            resources_path.mkdir(parents=True, exist_ok=True)
             
             # Copy executable to app bundle
             executable_in_bundle = macos_path / app_name
@@ -939,6 +941,44 @@ int main(int argc, char* argv[]) {
                 except subprocess.CalledProcessError as e:
                     logger.warning(f"Failed to set RPATH: {e}")
                     logger.info("You may need to manually set the RPATH using: install_name_tool -add_rpath @executable_path/../Frameworks <executable>")
+                
+                # Copy app icons if available
+                appicon_set = Path("resources/AppIcon.appiconset")
+                if appicon_set.exists():
+                    # Copy all icon files to Resources directory
+                    for icon_file in appicon_set.glob("*"):
+                        if icon_file.is_file() and icon_file.name != "Contents.json":
+                            shutil.copy(icon_file, resources_path / icon_file.name)
+                    logger.info("Copied app icons to app bundle")
+                elif Path("resources/appicon.png").exists():
+                    # Use single icon file as fallback
+                    shutil.copy("resources/appicon.png", resources_path / "appicon.png")
+                    logger.info("Copied app icon to app bundle")
+                
+                # Create Info.plist if it doesn't exist
+                info_plist_path = app_bundle_path / "Contents" / "Info.plist"
+                if not info_plist_path.exists():
+                    with open(info_plist_path, "w") as f:
+                        f.write(f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>{app_name}</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.pockage.{app_name}</string>
+    <key>CFBundleName</key>
+    <string>{app_name}</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleIconFile</key>
+    <string>appicon</string>
+</dict>
+</plist>""")
                 
                 # Update executable to use
                 executable = str(executable_in_bundle)
