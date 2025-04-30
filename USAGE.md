@@ -253,6 +253,28 @@ Or manually edit the `pockage.json` file to enable or disable platforms.
 
 ## Advanced Features
 
+### Application Icons
+
+Pockage automatically includes a complete set of application icons for macOS and iOS projects. The icons are stored in the `resources/AppIcon.appiconset` directory and are used when building app bundles. You can replace these icons with your own if desired.
+
+### IDE Integration
+
+Pockage can open your project in various IDEs:
+
+```bash
+# Open project in Xcode
+pockage open xcode
+
+# Open project specifically for iOS development
+pockage open ios
+
+# Open project specifically for macOS development
+pockage open macos
+
+# Open project in Android Studio
+pockage open android
+```
+
 ### Parallel Building
 
 Pockage automatically builds projects using multiple cores for faster compilation.
@@ -264,6 +286,24 @@ Dependencies are locked to specific versions in the pockage.json file to ensure 
 ### Efficient Package Caching
 
 Downloaded packages are cached to avoid redundant downloads and speed up future builds.
+
+### macOS App Bundles
+
+When building for macOS, Pockage creates proper `.app` bundles with the correct structure:
+
+```
+YourApp.app/
+  Contents/
+    MacOS/
+      YourApp (executable)
+    Frameworks/
+      SDL2.framework/
+    Resources/
+      (app icons)
+    Info.plist
+```
+
+This allows your applications to be distributed and run like standard macOS applications.
 
 ## Project Structure
 

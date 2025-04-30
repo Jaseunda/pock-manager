@@ -676,6 +676,97 @@ int main(int argc, char* argv[]) {
             print(f"Pockage version: {version}")
         except pkg_resources.DistributionNotFound:
             print("Pockage version: development")
+            
+    def open_ide(self, ide: str = None):
+        """Open the project in the specified IDE."""
+        if not self.config:
+            logger.error("No pockage.json found. Run 'pockage new' first.")
+            sys.exit(1)
+            
+        if ide == "xcode" or ide == "ios" or ide == "macos":
+            # Check if Xcode is installed
+            try:
+                subprocess.run(["xcode-select", "-p"], check=True, capture_output=True)
+            except subprocess.CalledProcessError:
+                logger.error("Xcode not found. Please install Xcode from the App Store.")
+                sys.exit(1)
+                
+            # Create Xcode project
+            project_name = self.config["name"]
+            xcodeproj_path = Path(f"{project_name}.xcodeproj")
+            
+            if not xcodeproj_path.exists():
+                logger.info("Creating Xcode project...")
+                
+                # Create basic Xcode project structure
+                xcodeproj_path.mkdir(exist_ok=True)
+                pbxproj_path = xcodeproj_path / "project.pbxproj"
+                
+                # Create a simple project.pbxproj file
+                with open(pbxproj_path, "w") as f:
+                    f.write(f"// !$*UTF8*$!\n{{\n\tarchiveVersion = 1;\n\tclasses = {{\n\t}};\n\tobjectVersion = 46;\n\tobjects = {{\n\t}};\n\trootObject = {project_name};\n}}\n")
+                
+                # Add source files to the project
+                src_files = list(Path("src").glob("**/*.cpp")) + list(Path("src").glob("**/*.c")) + list(Path("include").glob("**/*.h")) + list(Path("include").glob("**/*.hpp"))
+                
+                # Copy app icons to the project if available
+                if Path("resources/AppIcon.appiconset").exists():
+                    xcassets_path = xcodeproj_path / "Assets.xcassets"
+                    xcassets_path.mkdir(exist_ok=True)
+                    appicon_path = xcassets_path / "AppIcon.appiconset"
+                    appicon_path.mkdir(exist_ok=True)
+                    
+                    # Copy all files from resources/AppIcon.appiconset
+                    for icon_file in Path("resources/AppIcon.appiconset").glob("*"):
+                        if icon_file.is_file():
+                            shutil.copy(icon_file, appicon_path / icon_file.name)
+            
+            # Open Xcode project
+            logger.info(f"Opening {project_name}.xcodeproj in Xcode...")
+            subprocess.run(["open", xcodeproj_path], check=True)
+            
+        elif ide == "android" or ide == "android-studio":
+            # Check if Android Studio is installed
+            android_studio_path = "/Applications/Android Studio.app"
+            if not Path(android_studio_path).exists():
+                logger.error("Android Studio not found. Please install Android Studio.")
+                sys.exit(1)
+                
+            # Create Android Studio project if it doesn't exist
+            android_dir = Path("android")
+            if not android_dir.exists():
+                logger.info("Creating Android Studio project structure...")
+                android_dir.mkdir(exist_ok=True)
+                
+                # Copy app icons to the project if available
+                if Path("resources/AppIcon.appiconset").exists():
+                    mipmap_path = android_dir / "res" / "mipmap"
+                    mipmap_path.mkdir(parents=True, exist_ok=True)
+                    
+                    # Map iOS icon sizes to Android mipmap folders
+                    icon_mapping = {
+                        "16.png": "mipmap-mdpi/ic_launcher.png",
+                        "32.png": "mipmap-hdpi/ic_launcher.png",
+                        "64.png": "mipmap-xhdpi/ic_launcher.png",
+                        "128.png": "mipmap-xxhdpi/ic_launcher.png",
+                        "256.png": "mipmap-xxxhdpi/ic_launcher.png"
+                    }
+                    
+                    for icon_name, mipmap_path in icon_mapping.items():
+                        icon_file = Path(f"resources/AppIcon.appiconset/{icon_name}")
+                        if icon_file.exists():
+                            target_path = android_dir / "res" / mipmap_path
+                            target_path.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy(icon_file, target_path)
+            
+            # Open Android Studio
+            logger.info("Opening project in Android Studio...")
+            subprocess.run(["open", "-a", "Android Studio", android_dir], check=True)
+            
+        else:
+            logger.error(f"Unknown IDE: {ide}")
+            logger.info("Available IDEs: xcode, ios, macos, android, android-studio")
+            sys.exit(1)
 
     def build(self, platform: Optional[str] = None):
         """Build the project for a specific platform or the current system platform."""
@@ -1053,6 +1144,10 @@ def main():
 
     # Run command
     subparsers.add_parser("run", help="Run the project")
+    
+    # Open command
+    open_parser = subparsers.add_parser("open", help="Open the project in an IDE")
+    open_parser.add_argument("ide", help="IDE to open the project in (xcode, ios, macos, android)")
 
     # Clean command
     subparsers.add_parser("clean", help="Clean build artifacts")
@@ -1098,6 +1193,8 @@ def main():
         pockage.build(args.platform)
     elif args.command == "run":
         pockage.run()
+    elif args.command == "open":
+        pockage.open_ide(args.ide)
     elif args.command == "clean":
         pockage.clean()
     elif args.command == "update":
