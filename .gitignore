@@ -59,3 +59,4 @@ pockage.lock
 test-project/
 test/
 docs/HOMEBREW.md
+dist/

@@ -1813,9 +1813,8 @@ int main(int argc, char* argv[]) {
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        # First, build the project
-        logger.info("Building project...", animate=True)
-        self.build()
+        # Skip the build step for release packaging
+        # This allows the command to work without platform-specific configurations
         
         # Determine version
         if not version and self.config and "version" in self.config:
@@ -1863,6 +1862,51 @@ int main(int argc, char* argv[]) {
         # Copy templates directory
         if os.path.exists("pockage/templates"):
             shutil.copytree("pockage/templates", output_path / "pockage/templates", dirs_exist_ok=True)
+        
+        # Create installer scripts
+        with open(output_path / "install.sh", "w") as f:
+            f.write("#!/bin/bash\n\necho \"Installing Pockage...\"\npip install .\necho \"Installation complete! Use 'pockage' or 'poc' to get started.\"\n")
+        
+        with open(output_path / "install.bat", "w") as f:
+            f.write("@echo off\necho Installing Pockage...\npip install .\necho Installation complete! Use 'pockage' or 'poc' to get started.\n")
+        
+        # Make the shell script executable
+        os.chmod(output_path / "install.sh", 0o755)
+        
+        # Create a README for the release
+        with open(output_path / "README.md", "w") as f:
+            f.write(f"""# Pockage {version}
+
+This is a release build of Pockage, the simple C++ package manager and build tool.
+
+## What's Included
+
+- Minified Python code for better performance
+- All necessary templates and resources
+- Command-line tools: `pockage` and `poc` (alias)
+
+## Installation
+
+Run the included installer script:
+
+```bash
+# On macOS/Linux
+./install.sh
+
+# On Windows
+.\install.bat
+```
+
+Or install manually:
+
+```bash
+pip install .
+```
+
+## Documentation
+
+For full documentation, visit: https://github.com/Jaseunda/pockage/tree/main/docs
+""")
         
         # Create a manifest file with version info
         manifest = {
@@ -1913,9 +1957,9 @@ int main(int argc, char* argv[]) {
         content = re.sub(r'"""[^"]*"""', '', content, flags=re.DOTALL)
         content = re.sub(r"'''[^']*'''", '', content, flags=re.DOTALL)
         
-        # Remove empty lines and leading/trailing whitespace
-        lines = [line.strip() for line in content.split('\n')]
-        lines = [line for line in lines if line]
+        # Remove empty lines but preserve indentation
+        lines = content.split('\n')
+        lines = [line for line in lines if line.strip()]
         
         # Join lines back together
         return '\n'.join(lines)
