@@ -698,16 +698,101 @@ int main(int argc, char* argv[]) {
             if not xcodeproj_path.exists():
                 logger.info("Creating Xcode project...")
                 
-                # Create basic Xcode project structure
+                # Create a more complete Xcode project structure
                 xcodeproj_path.mkdir(exist_ok=True)
-                pbxproj_path = xcodeproj_path / "project.pbxproj"
                 
-                # Create a simple project.pbxproj file
-                with open(pbxproj_path, "w") as f:
-                    f.write(f"// !$*UTF8*$!\n{{\n\tarchiveVersion = 1;\n\tclasses = {{\n\t}};\n\tobjectVersion = 46;\n\tobjects = {{\n\t}};\n\trootObject = {project_name};\n}}\n")
+                # Create necessary subdirectories
+                xcschemes_path = xcodeproj_path / "xcshareddata" / "xcschemes"
+                xcschemes_path.mkdir(parents=True, exist_ok=True)
                 
-                # Add source files to the project
+                # Get source files
                 src_files = list(Path("src").glob("**/*.cpp")) + list(Path("src").glob("**/*.c")) + list(Path("include").glob("**/*.h")) + list(Path("include").glob("**/*.hpp"))
+                
+                # Generate file references and build file sections for pbxproj
+                file_refs = ""
+                build_files = ""
+                file_ref_ids = {}
+                build_file_ids = {}
+                
+                for i, src_file in enumerate(src_files):
+                    file_ref_id = f"FILEREF{i:08X}"
+                    build_file_id = f"BUILDFILE{i:08X}"
+                    file_ref_ids[src_file] = file_ref_id
+                    build_file_ids[src_file] = build_file_id
+                    
+                    file_type = "sourcecode.cpp.cpp"
+                    if src_file.suffix == ".h" or src_file.suffix == ".hpp":
+                        file_type = "sourcecode.c.h"
+                    elif src_file.suffix == ".c":
+                        file_type = "sourcecode.c.c"
+                    
+                    file_refs += f"\t\t{file_ref_id} = {{isa = PBXFileReference; path = \"{src_file}\"; sourceTree = \"<group>\"; lastKnownFileType = {file_type}; name = \"{src_file.name}\"; }};\n"
+                    build_files += f"\t\t{build_file_id} = {{isa = PBXBuildFile; fileRef = {file_ref_id}; }};\n"
+                
+                # Generate unique IDs
+                project_id = "PROJECT" + hashlib.md5(project_name.encode()).hexdigest()[:8].upper()
+                main_group_id = "GROUP" + hashlib.md5((project_name + "_group").encode()).hexdigest()[:8].upper()
+                sources_group_id = "SOURCES" + hashlib.md5((project_name + "_sources").encode()).hexdigest()[:8].upper()
+                target_id = "TARGET" + hashlib.md5(project_name.encode()).hexdigest()[:8].upper()
+                config_list_id = "CONFIGLIST" + hashlib.md5(project_name.encode()).hexdigest()[:8].upper()
+                config_id = "CONFIG" + hashlib.md5(project_name.encode()).hexdigest()[:8].upper()
+                build_phase_id = "BUILDPHASE" + hashlib.md5(project_name.encode()).hexdigest()[:8].upper()
+                
+                # Create project.pbxproj file with more complete structure
+                pbxproj_path = xcodeproj_path / "project.pbxproj"
+                with open(pbxproj_path, "w") as f:
+                    f.write(f"// !$*UTF8*$!\n{{\n\tarchiveVersion = 1;\n\tclasses = {{\n\t}};\n\tobjectVersion = 46;\n\tobjects = {{\n")
+                    
+                    # Add file references
+                    f.write(file_refs)
+                    
+                    # Add build files
+                    f.write(build_files)
+                    
+                    # Add build phase
+                    f.write(f"\t\t{build_phase_id} = {{\n\t\t\tisa = PBXSourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n")
+                    for build_file_id in build_file_ids.values():
+                        f.write(f"\t\t\t\t{build_file_id},\n")
+                    f.write(f"\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t}};\n")
+                    
+                    # Add main group
+                    f.write(f"\t\t{main_group_id} = {{\n\t\t\tisa = PBXGroup;\n\t\t\tchildren = (\n\t\t\t\t{sources_group_id},\n\t\t\t);\n\t\t\tsourceTree = \"<group>\";\n\t\t}};\n")
+                    
+                    # Add sources group
+                    f.write(f"\t\t{sources_group_id} = {{\n\t\t\tisa = PBXGroup;\n\t\t\tchildren = (\n")
+                    for file_ref_id in file_ref_ids.values():
+                        f.write(f"\t\t\t\t{file_ref_id},\n")
+                    f.write(f"\t\t\t);\n\t\t\tname = Sources;\n\t\t\tsourceTree = \"<group>\";\n\t\t}};\n")
+                    
+                    # Add build configuration
+                    f.write(f"\t\t{config_id} = {{\n\t\t\tisa = XCBuildConfiguration;\n\t\t\tbuildSettings = {{\n\t\t\t\tALWAYS_SEARCH_USER_PATHS = NO;\n\t\t\t\tCLANG_CXX_LANGUAGE_STANDARD = \"c++17\";\n\t\t\t\tPRODUCT_NAME = \"{project_name}\";\n\t\t\t}};\n\t\t\tname = Release;\n\t\t}};\n")
+                    
+                    # Add configuration list
+                    f.write(f"\t\t{config_list_id} = {{\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = (\n\t\t\t\t{config_id},\n\t\t\t);\n\t\t\tdefaultConfigurationIsVisible = 0;\n\t\t\tdefaultConfigurationName = Release;\n\t\t}};\n")
+                    
+                    # Add target
+                    f.write(f"\t\t{target_id} = {{\n\t\t\tisa = PBXNativeTarget;\n\t\t\tbuildConfigurationList = {config_list_id};\n\t\t\tbuildPhases = (\n\t\t\t\t{build_phase_id},\n\t\t\t);\n\t\t\tbuildRules = (\n\t\t\t);\n\t\t\tdependencies = (\n\t\t\t);\n\t\t\tname = \"{project_name}\";\n\t\t\tproductName = \"{project_name}\";\n\t\t\tproductType = \"com.apple.product-type.tool\";\n\t\t}};\n")
+                    
+                    # Add project
+                    f.write(f"\t\t{project_id} = {{\n\t\t\tisa = PBXProject;\n\t\t\tattributes = {{\n\t\t\t\tLastUpgradeCheck = 1200;\n\t\t\t\tORGANIZATIONNAME = \"{project_name}\";\n\t\t\t}};\n\t\t\tbuildConfigurationList = {config_list_id};\n\t\t\tcompatibilityVersion = \"Xcode 12.0\";\n\t\t\tdevelopmentRegion = en;\n\t\t\thasScannedForEncodings = 0;\n\t\t\tknownRegions = (\n\t\t\t\ten,\n\t\t\t\tBase,\n\t\t\t);\n\t\t\tmainGroup = {main_group_id};\n\t\t\tprojectDirPath = \"\";\n\t\t\tprojectRoot = \"\";\n\t\t\ttargets = (\n\t\t\t\t{target_id},\n\t\t\t);\n\t\t}};\n")
+                    
+                    # Close objects and set root object
+                    f.write(f"\t}};\n\trootObject = {project_id};\n}}\n")
+                
+                # Create xcscheme file
+                scheme_path = xcschemes_path / f"{project_name}.xcscheme"
+                with open(scheme_path, "w") as f:
+                    f.write(f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+                    f.write(f"<Scheme LastUpgradeVersion=\"1200\" version=\"1.3\">\n")
+                    f.write(f"   <BuildAction parallelizeBuildables=\"YES\" buildImplicitDependencies=\"YES\">\n")
+                    f.write(f"      <BuildActionEntries>\n")
+                    f.write(f"         <BuildActionEntry buildForTesting=\"YES\" buildForRunning=\"YES\" buildForProfiling=\"YES\" buildForArchiving=\"YES\" buildForAnalyzing=\"YES\">\n")
+                    f.write(f"            <BuildableReference BuildableIdentifier=\"primary\" BlueprintIdentifier=\"{target_id}\" BuildableName=\"{project_name}\" BlueprintName=\"{project_name}\" ReferencedContainer=\"container:{project_name}.xcodeproj\">\n")
+                    f.write(f"            </BuildableReference>\n")
+                    f.write(f"         </BuildActionEntry>\n")
+                    f.write(f"      </BuildActionEntries>\n")
+                    f.write(f"   </BuildAction>\n")
+                    f.write(f"</Scheme>\n")
                 
                 # Copy app icons to the project if available
                 if Path("resources/AppIcon.appiconset").exists():
@@ -720,6 +805,14 @@ int main(int argc, char* argv[]) {
                     for icon_file in Path("resources/AppIcon.appiconset").glob("*"):
                         if icon_file.is_file():
                             shutil.copy(icon_file, appicon_path / icon_file.name)
+                    
+                    # Create Contents.json if it doesn't exist
+                    contents_json_path = appicon_path / "Contents.json"
+                    if not contents_json_path.exists():
+                        with open(contents_json_path, "w") as f:
+                            f.write('{"images":[{"size":"16x16","idiom":"mac","filename":"16.png","scale":"1x"},{"size":"16x16","idiom":"mac","filename":"32.png","scale":"2x"},{"size":"32x32","idiom":"mac","filename":"32.png","scale":"1x"},{"size":"32x32","idiom":"mac","filename":"64.png","scale":"2x"},{"size":"128x128","idiom":"mac","filename":"128.png","scale":"1x"},{"size":"128x128","idiom":"mac","filename":"256.png","scale":"2x"},{"size":"256x256","idiom":"mac","filename":"256.png","scale":"1x"},{"size":"256x256","idiom":"mac","filename":"512.png","scale":"2x"},{"size":"512x512","idiom":"mac","filename":"512.png","scale":"1x"},{"size":"512x512","idiom":"mac","filename":"1024.png","scale":"2x"}],"info":{"version":1,"author":"xcode"}}')
+                
+                logger.info(f"Created Xcode project: {project_name}.xcodeproj")
             
             # Open Xcode project
             logger.info(f"Opening {project_name}.xcodeproj in Xcode...")
