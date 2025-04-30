@@ -67,3 +67,4 @@ pockage-0.1.1-py3-none-any.whl.sha256
 pockage.egg-info/
 build/
 *.egg-info/
+RELEASE.md
