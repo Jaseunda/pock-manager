@@ -1547,8 +1547,8 @@ int main(int argc, char* argv[]) {
             
         logger.run("Preparing to set sail with your application", animate=True)
         
-    def status(self, scan_dir: str = None, scan_depth: int = 3):
-        """Show package status, storage usage, and projects."""
+    def status(self):
+        """Show package status and storage usage."""
         logger.info("Checking Pockage status", animate=True)
         
         # Show version information
@@ -1592,70 +1592,76 @@ int main(int argc, char* argv[]) {
         else:
             print(f"  No libraries installed")
         
-        # Scan for projects using pockage.json
-        print(f"\n{Colors.BOLD}Projects:{Colors.RESET}")
-        if scan_dir:
-            logger.info(f"Scanning {scan_dir} for projects (depth: {scan_depth})...", animate=True)
-            projects = []
+        print(f"\n{Colors.BOLD}{Colors.BLUE}End of Status Report{Colors.RESET}")
+        
+    def scan(self, scan_dir: str = None, scan_depth: int = 3):
+        """Scan for projects using pockage.json."""
+        logger.info(f"Scanning for Pockage projects", animate=True)
+        
+        print(f"\n{Colors.BOLD}{Colors.BLUE}🔍 Pockage Project Scanner{Colors.RESET}")
+        
+        if not scan_dir:
+            scan_dir = str(Path.home())
             
-            # Use a set to avoid duplicates
-            scanned_dirs = set()
+        logger.info(f"Scanning {scan_dir} for projects (depth: {scan_depth})...", animate=True)
+        projects = []
+        
+        # Use a set to avoid duplicates
+        scanned_dirs = set()
+        
+        def scan_directory(directory, current_depth=0):
+            if current_depth > scan_depth:
+                return
             
-            def scan_directory(directory, current_depth=0):
-                if current_depth > scan_depth:
+            try:
+                # Convert to absolute path and resolve symlinks
+                abs_dir = Path(directory).resolve()
+                
+                # Skip if already scanned or if it's a hidden directory
+                if abs_dir in scanned_dirs or abs_dir.name.startswith('.'):
                     return
                 
-                try:
-                    # Convert to absolute path and resolve symlinks
-                    abs_dir = Path(directory).resolve()
-                    
-                    # Skip if already scanned or if it's a hidden directory
-                    if abs_dir in scanned_dirs or abs_dir.name.startswith('.'):
-                        return
-                    
-                    scanned_dirs.add(abs_dir)
-                    
-                    # Check for pockage.json
-                    pockage_json = abs_dir / "pockage.json"
-                    if pockage_json.exists():
-                        try:
-                            with open(pockage_json) as f:
-                                project_data = json.load(f)
-                                projects.append({
-                                    "path": str(abs_dir),
-                                    "name": project_data.get("name", abs_dir.name),
-                                    "display_name": project_data.get("display_name", abs_dir.name),
-                                    "version": project_data.get("version", "unknown"),
-                                    "description": project_data.get("description", ""),
-                                })
-                        except Exception as e:
-                            logger.warning(f"Failed to parse {pockage_json}: {e}")
-                    
-                    # Scan subdirectories
-                    if current_depth < scan_depth:
-                        for subdir in abs_dir.iterdir():
-                            if subdir.is_dir() and not subdir.name.startswith('.'):
-                                scan_directory(subdir, current_depth + 1)
-                except (PermissionError, FileNotFoundError) as e:
-                    # Skip directories we can't access
-                    pass
-            
-            # Start scanning
-            scan_directory(scan_dir)
-            
-            if projects:
-                print(f"  Found {len(projects)} projects:")
-                for i, project in enumerate(projects, 1):
-                    print(f"\n  {i}. {Colors.BOLD}{Colors.GREEN}{project['display_name']} ({project['version']}){Colors.RESET}")
-                    print(f"     {Colors.CYAN}Path:{Colors.RESET} {project['path']}")
-                    if project['description']:
-                        print(f"     {Colors.CYAN}Description:{Colors.RESET} {project['description']}")
-            else:
-                print(f"  No projects found in {scan_dir} (scan depth: {scan_depth})")
-        else:
-            print(f"  No scan directory specified")
+                scanned_dirs.add(abs_dir)
+                
+                # Check for pockage.json
+                pockage_json = abs_dir / "pockage.json"
+                if pockage_json.exists():
+                    try:
+                        with open(pockage_json) as f:
+                            project_data = json.load(f)
+                            projects.append({
+                                "path": str(abs_dir),
+                                "name": project_data.get("name", abs_dir.name),
+                                "display_name": project_data.get("display_name", abs_dir.name),
+                                "version": project_data.get("version", "unknown"),
+                                "description": project_data.get("description", ""),
+                            })
+                    except Exception as e:
+                        logger.warning(f"Failed to parse {pockage_json}: {e}")
+                
+                # Scan subdirectories
+                if current_depth < scan_depth:
+                    for subdir in abs_dir.iterdir():
+                        if subdir.is_dir() and not subdir.name.startswith('.'):
+                            scan_directory(subdir, current_depth + 1)
+            except (PermissionError, FileNotFoundError) as e:
+                # Skip directories we can't access
+                pass
         
-        print(f"\n{Colors.BOLD}{Colors.BLUE}End of Status Report{Colors.RESET}")
+        # Start scanning
+        scan_directory(scan_dir)
+        
+        if projects:
+            print(f"\n{Colors.BOLD}Found {len(projects)} projects:{Colors.RESET}")
+            for i, project in enumerate(projects, 1):
+                print(f"\n  {i}. {Colors.BOLD}{Colors.GREEN}{project['display_name']} ({project['version']}){Colors.RESET}")
+                print(f"     {Colors.CYAN}Path:{Colors.RESET} {project['path']}")
+                if project['description']:
+                    print(f"     {Colors.CYAN}Description:{Colors.RESET} {project['description']}")
+        else:
+            print(f"\n{Colors.BOLD}No projects found in {scan_dir} (scan depth: {scan_depth}){Colors.RESET}")
+        
+        print(f"\n{Colors.BOLD}{Colors.BLUE}End of Scan Report{Colors.RESET}")
 
         # Determine target platform
         target_platform = platform if platform else self.system
@@ -1869,9 +1875,12 @@ def main():
     config_parser.add_argument("value", help="Configuration value")
 
     # Status command
-    status_parser = subparsers.add_parser("status", help="Show package status, storage usage, and projects")
-    status_parser.add_argument("--scan-depth", type=int, default=3, help="Maximum depth to scan for projects")
-    status_parser.add_argument("--scan-dir", default=str(Path.home()), help="Directory to scan for projects")
+    subparsers.add_parser("status", help="Show package status and storage usage")
+    
+    # Scan command
+    scan_parser = subparsers.add_parser("scan", help="Scan for projects using pockage.json")
+    scan_parser.add_argument("--scan-depth", type=int, default=3, help="Maximum depth to scan for projects")
+    scan_parser.add_argument("--scan-dir", default=str(Path.home()), help="Directory to scan for projects")
     
     # Version command
     subparsers.add_parser("version", help="Show Pockage version")
@@ -1911,7 +1920,9 @@ def main():
         if args.action == "set":
             pockage.config_set(args.key, args.value)
     elif args.command == "status":
-        pockage.status(args.scan_dir, args.scan_depth)
+        pockage.status()
+    elif args.command == "scan":
+        pockage.scan(args.scan_dir, args.scan_depth)
     elif args.command == "version":
         pockage.version()
     else:
