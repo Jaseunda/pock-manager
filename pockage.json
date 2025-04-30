@@ -6,6 +6,24 @@
   "description": "A new project built with Pockage!",
   "author": "JASENUNDA",
   "copyright": "Copyright © 2023 JASENUNDA. All rights reserved.",
+  "registry": {
+    "raylib": {
+      "urls": {
+        "all": "https://github.com/raysan5/raylib/archive/refs/tags/{version}.zip"
+      },
+      "extract": {
+        "all": "_extract_zip"
+      }
+    },
+    "box2d": {
+      "urls": {
+        "all": "https://github.com/erincatto/box2d/archive/refs/tags/v{version}.zip"
+      },
+      "extract": {
+        "all": "_extract_zip"
+      }
+    }
+  },
   "platforms": {
     "macos": {
       "enabled": true,

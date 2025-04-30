@@ -12,6 +12,8 @@ import tarfile
 import platform
 import concurrent.futures
 import datetime
+import time
+import random
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 import logging
@@ -22,12 +24,129 @@ import glob
 import pkg_resources
 import tqdm
 
-# Configure logging with Pockage branding (cargo ship + box emojis)
+# ANSI color codes for terminal output
+class Colors:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
+    BG_BLACK = "\033[40m"
+    BG_RED = "\033[41m"
+    BG_GREEN = "\033[42m"
+    BG_YELLOW = "\033[43m"
+    BG_BLUE = "\033[44m"
+    BG_MAGENTA = "\033[45m"
+    BG_CYAN = "\033[46m"
+    BG_WHITE = "\033[47m"
+
+# Nautical-themed animations and branding
+class NauticalLogger:
+    def __init__(self, name):
+        self.name = name
+        self.logger = logging.getLogger(name)
+        self.animations = {
+            "sailing": ["🌊⛵️     ", " 🌊⛵️    ", "  🌊⛵️   ", "   🌊⛵️  ", "    🌊⛵️ ", "     🌊⛵️"],
+            "packaging": ["📦     ", " 📦    ", "  📦   ", "   📦  ", "    📦 ", "     📦"],
+            "loading": ["⏳     ", " ⏳    ", "  ⏳   ", "   ⏳  ", "    ⏳ ", "     ⏳"],
+            "anchor": ["⚓️     ", " ⚓️    ", "  ⚓️   ", "   ⚓️  ", "    ⚓️ ", "     ⚓️"],
+            "compass": ["🧭     ", " 🧭    ", "  🧭   ", "   🧭  ", "    🧭 ", "     🧭"],
+        }
+        self.nautical_terms = {
+            "info": ["Ahoy!", "Smooth sailing!", "All hands on deck!", "Anchors aweigh!", "Setting sail!"],
+            "warning": ["Rough waters ahead!", "Batten down the hatches!", "Stormy seas!", "Choppy waters!"],
+            "error": ["Abandon ship!", "Man overboard!", "Mayday!", "SOS!", "Walking the plank!"],
+            "success": ["Land ho!", "Treasure found!", "Safe harbor!", "Smooth sailing!", "Ship shape!"],
+            "download": ["Hauling cargo!", "Loading supplies!", "Stocking the hold!", "Bringing aboard!"],
+            "build": ["Building the ship!", "Raising the mast!", "Crafting the vessel!", "Constructing the hull!"],
+            "run": ["Setting sail!", "Full speed ahead!", "Wind in our sails!", "Charting course!"],
+        }
+    
+    def _get_term(self, category):
+        terms = self.nautical_terms.get(category, self.nautical_terms["info"])
+        return random.choice(terms)
+    
+    def _animate(self, message, animation_type="sailing", duration=1.0, color=Colors.BLUE):
+        frames = self.animations.get(animation_type, self.animations["sailing"])
+        start_time = time.time()
+        i = 0
+        try:
+            while time.time() - start_time < duration:
+                frame = frames[i % len(frames)]
+                sys.stdout.write(f"\r{color}{frame} {message}{Colors.RESET}")
+                sys.stdout.flush()
+                time.sleep(0.1)
+                i += 1
+            sys.stdout.write("\r" + " " * (len(message) + 10) + "\r")
+            sys.stdout.flush()
+        except KeyboardInterrupt:
+            sys.stdout.write("\r" + " " * (len(message) + 10) + "\r")
+            sys.stdout.flush()
+            raise
+    
+    def info(self, message, animate=False):
+        term = self._get_term("info")
+        formatted_message = f"{Colors.BLUE}{term}{Colors.RESET} {message}"
+        self.logger.info(formatted_message)
+        if animate:
+            self._animate(message, "sailing", 1.0, Colors.BLUE)
+    
+    def warning(self, message, animate=True):
+        term = self._get_term("warning")
+        formatted_message = f"{Colors.YELLOW}{term}{Colors.RESET} {message}"
+        self.logger.warning(formatted_message)
+        if animate:
+            self._animate(message, "anchor", 1.0, Colors.YELLOW)
+    
+    def error(self, message, animate=True):
+        term = self._get_term("error")
+        formatted_message = f"{Colors.RED}{term}{Colors.RESET} {message}"
+        self.logger.error(formatted_message)
+        if animate:
+            self._animate(message, "anchor", 1.0, Colors.RED)
+    
+    def success(self, message, animate=True):
+        term = self._get_term("success")
+        formatted_message = f"{Colors.GREEN}{term}{Colors.RESET} {message}"
+        self.logger.info(formatted_message)
+        if animate:
+            self._animate(message, "sailing", 1.0, Colors.GREEN)
+    
+    def download(self, message, animate=True):
+        term = self._get_term("download")
+        formatted_message = f"{Colors.CYAN}{term}{Colors.RESET} {message}"
+        self.logger.info(formatted_message)
+        if animate:
+            self._animate(message, "packaging", 1.0, Colors.CYAN)
+    
+    def build(self, message, animate=True):
+        term = self._get_term("build")
+        formatted_message = f"{Colors.MAGENTA}{term}{Colors.RESET} {message}"
+        self.logger.info(formatted_message)
+        if animate:
+            self._animate(message, "compass", 1.0, Colors.MAGENTA)
+    
+    def run(self, message, animate=True):
+        term = self._get_term("run")
+        formatted_message = f"{Colors.GREEN}{term}{Colors.RESET} {message}"
+        self.logger.info(formatted_message)
+        if animate:
+            self._animate(message, "sailing", 1.0, Colors.GREEN)
+
+# Configure basic logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - 🚢📦 %(message)s'
 )
-logger = logging.getLogger('pockage')
+
+# Create our custom nautical logger
+logger = NauticalLogger('pockage')
 
 class PockageManager:
     def __init__(self):
@@ -61,29 +180,139 @@ class PockageManager:
             json.dump(self.global_config, f, indent=2)
 
     def _load_lib_registry(self) -> Dict:
-        """Load library registry with official download URLs and build instructions."""
-        return {
-            "sdl2": {
-                "urls": {
-                    "darwin": "https://github.com/libsdl-org/SDL/releases/download/release-{version}/SDL2-{version}.dmg",
-                    "windows": "https://github.com/libsdl-org/SDL/releases/download/release-{version}/SDL2-devel-{version}-VC.zip",
-                    "linux": "https://github.com/libsdl-org/SDL/releases/download/release-{version}/SDL2-{version}.tar.gz"
+        """Load library registry with official download URLs and build instructions.
+        
+        This method loads registry data from multiple sources:
+        1. Local registry file in the project directory
+        2. Remote registry from GitHub repository
+        3. Fallback to built-in registry if others fail
+        """
+        registry = {}
+        
+        # Try to load from local pockage.json first
+        local_pockage_path = Path("pockage.json")
+        if local_pockage_path.exists():
+            try:
+                with open(local_pockage_path) as f:
+                    logger.info("Loading registry from local pockage.json", animate=True)
+                    local_config = json.load(f)
+                    if "registry" in local_config:
+                        registry.update(local_config["registry"])
+                        logger.success("Successfully loaded local registry", animate=True)
+            except Exception as e:
+                logger.warning(f"Failed to load local registry: {e}")
+        
+        # Try to load from local registry/supported.json
+        local_registry_path = Path("registry/supported.json")
+        if local_registry_path.exists():
+            try:
+                with open(local_registry_path) as f:
+                    logger.info("Loading registry from local supported.json", animate=True)
+                    local_registry = json.load(f)
+                    
+                    # Convert the supported.json format to our internal format
+                    for lib_name, lib_info in local_registry.items():
+                        if lib_name not in registry:
+                            registry[lib_name] = {
+                                "urls": {},
+                                "extract": {}
+                            }
+                            
+                        # Get the latest version info
+                        latest_version = lib_info.get("latest_version")
+                        if latest_version and "versions" in lib_info and latest_version in lib_info["versions"]:
+                            version_info = lib_info["versions"][latest_version]
+                            
+                            # Map URLs to our format
+                            if "url_all" in version_info:
+                                registry[lib_name]["urls"]["all"] = version_info["url_all"].replace(latest_version, "{version}")
+                                registry[lib_name]["extract"]["all"] = self._extract_zip
+                            else:
+                                if "url_darwin" in version_info or "url_macos" in version_info:
+                                    darwin_url = version_info.get("url_darwin", version_info.get("url_macos"))
+                                    registry[lib_name]["urls"]["darwin"] = darwin_url.replace(latest_version, "{version}")
+                                    registry[lib_name]["extract"]["darwin"] = self._extract_dmg if darwin_url.endswith(".dmg") else self._extract_tar if darwin_url.endswith(".tar.gz") else self._extract_zip
+                                    
+                                if "url_windows" in version_info:
+                                    registry[lib_name]["urls"]["windows"] = version_info["url_windows"].replace(latest_version, "{version}")
+                                    registry[lib_name]["extract"]["windows"] = self._extract_zip
+                                    
+                                if "url_linux" in version_info:
+                                    registry[lib_name]["urls"]["linux"] = version_info["url_linux"].replace(latest_version, "{version}")
+                                    registry[lib_name]["extract"]["linux"] = self._extract_tar if version_info["url_linux"].endswith(".tar.gz") else self._extract_zip
+                    
+                    logger.success("Successfully loaded local registry file", animate=True)
+            except Exception as e:
+                logger.warning(f"Failed to load local registry file: {e}")
+        
+        # Try to load from remote GitHub repository
+        try:
+            logger.info("Fetching registry from GitHub repository", animate=True)
+            with urllib.request.urlopen("https://raw.githubusercontent.com/Jaseunda/pockages/refs/heads/main/registry/supported.json") as response:
+                remote_registry = json.loads(response.read().decode())
+                
+                # Convert the supported.json format to our internal format
+                for lib_name, lib_info in remote_registry.items():
+                    if lib_name not in registry:
+                        registry[lib_name] = {
+                            "urls": {},
+                            "extract": {}
+                        }
+                        
+                    # Get the latest version info
+                    latest_version = lib_info.get("latest_version")
+                    if latest_version and "versions" in lib_info and latest_version in lib_info["versions"]:
+                        version_info = lib_info["versions"][latest_version]
+                        
+                        # Map URLs to our format
+                        if "url_all" in version_info:
+                            registry[lib_name]["urls"]["all"] = version_info["url_all"].replace(latest_version, "{version}")
+                            registry[lib_name]["extract"]["all"] = self._extract_zip
+                        else:
+                            if "url_darwin" in version_info or "url_macos" in version_info:
+                                darwin_url = version_info.get("url_darwin", version_info.get("url_macos"))
+                                registry[lib_name]["urls"]["darwin"] = darwin_url.replace(latest_version, "{version}")
+                                registry[lib_name]["extract"]["darwin"] = self._extract_dmg if darwin_url.endswith(".dmg") else self._extract_tar if darwin_url.endswith(".tar.gz") else self._extract_zip
+                                
+                            if "url_windows" in version_info:
+                                registry[lib_name]["urls"]["windows"] = version_info["url_windows"].replace(latest_version, "{version}")
+                                registry[lib_name]["extract"]["windows"] = self._extract_zip
+                                
+                            if "url_linux" in version_info:
+                                registry[lib_name]["urls"]["linux"] = version_info["url_linux"].replace(latest_version, "{version}")
+                                registry[lib_name]["extract"]["linux"] = self._extract_tar if version_info["url_linux"].endswith(".tar.gz") else self._extract_zip
+                
+                logger.success("Successfully loaded remote registry", animate=True)
+        except Exception as e:
+            logger.warning(f"Failed to fetch remote registry: {e}")
+        
+        # If no registry was loaded, use the built-in fallback
+        if not registry:
+            logger.warning("Using built-in registry fallback", animate=True)
+            registry = {
+                "sdl2": {
+                    "urls": {
+                        "darwin": "https://github.com/libsdl-org/SDL/releases/download/release-{version}/SDL2-{version}.dmg",
+                        "windows": "https://github.com/libsdl-org/SDL/releases/download/release-{version}/SDL2-devel-{version}-VC.zip",
+                        "linux": "https://github.com/libsdl-org/SDL/releases/download/release-{version}/SDL2-{version}.tar.gz"
+                    },
+                    "extract": {
+                        "darwin": self._extract_dmg,
+                        "windows": self._extract_zip,
+                        "linux": self._extract_tar
+                    }
                 },
-                "extract": {
-                    "darwin": self._extract_dmg,
-                    "windows": self._extract_zip,
-                    "linux": self._extract_tar
-                }
-            },
-            "imgui": {
-                "urls": {
-                    "all": "https://github.com/ocornut/imgui/archive/refs/tags/v{version}.zip"
-                },
-                "extract": {
-                    "all": self._extract_zip
+                "imgui": {
+                    "urls": {
+                        "all": "https://github.com/ocornut/imgui/archive/refs/tags/v{version}.zip"
+                    },
+                    "extract": {
+                        "all": self._extract_zip
+                    }
                 }
             }
-        }
+        
+        return registry
 
     def _extract_dmg(self, file_path: str, extract_path: str):
         """Extract a DMG file on macOS."""
@@ -141,13 +370,18 @@ class PockageManager:
         lib_dir = Path("libs") / library
         lib_dir.mkdir(parents=True, exist_ok=True)
         
+        logger.info(f"Preparing to load {library} {version} aboard", animate=True)
         temp_file = tempfile.NamedTemporaryFile(delete=False)
         try:
             self._download_file(url, temp_file.name)
+            
+            # Animate extraction process
+            logger.info(f"Unpacking cargo for {library} {version}", animate=True)
             extract_func(temp_file.name, str(lib_dir))
             
             # Special handling for ImGui which extracts to a versioned subfolder
             if library == "imgui":
+                logger.info(f"Organizing ImGui cargo in the ship's hold", animate=True)
                 # Find the extracted imgui directory (usually named imgui-x.xx.x)
                 imgui_dirs = [d for d in lib_dir.iterdir() if d.is_dir() and d.name.startswith("imgui-")]
                 if imgui_dirs:
@@ -167,24 +401,66 @@ class PockageManager:
                             if file.is_file():
                                 shutil.copy(file, backends_dir)
             
-            logger.info(f"Installed {library} {version}")
+            logger.success(f"Successfully loaded {library} {version} aboard!", animate=True)
         finally:
             os.unlink(temp_file.name)
 
     def _download_file(self, url: str, dest_path: str):
-        """Download a file with progress bar."""
+        """Download a file with nautical-themed progress bar."""
         try:
+            logger.download(f"Hauling cargo from {url}", animate=True)
             with urllib.request.urlopen(url) as response:
                 total_size = int(response.headers.get('content-length', 0))
                 
                 with open(dest_path, 'wb') as f:
-                    with tqdm.tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading") as pbar:
-                        while True:
-                            chunk = response.read(8192)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                            pbar.update(len(chunk))
+                    # Custom progress bar with nautical theme
+                    downloaded = 0
+                    chunk_size = 8192
+                    start_time = time.time()
+                    
+                    while True:
+                        chunk = response.read(chunk_size)
+                        if not chunk:
+                            break
+                            
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        
+                        # Calculate progress
+                        if total_size > 0:
+                            percent = int(50 * downloaded / total_size)
+                            progress = f"{Colors.BLUE}{'⚓' * percent}{'◻' * (50 - percent)}{Colors.RESET}"
+                            speed = downloaded / (time.time() - start_time) if time.time() > start_time else 0
+                            
+                            # Format size units
+                            if speed < 1024:
+                                speed_str = f"{speed:.2f} B/s"
+                            elif speed < 1024 * 1024:
+                                speed_str = f"{speed/1024:.2f} KB/s"
+                            else:
+                                speed_str = f"{speed/(1024*1024):.2f} MB/s"
+                                
+                            if downloaded < 1024:
+                                size_str = f"{downloaded} B"
+                            elif downloaded < 1024 * 1024:
+                                size_str = f"{downloaded/1024:.2f} KB"
+                            else:
+                                size_str = f"{downloaded/(1024*1024):.2f} MB"
+                                
+                            if total_size < 1024:
+                                total_str = f"{total_size} B"
+                            elif total_size < 1024 * 1024:
+                                total_str = f"{total_size/1024:.2f} KB"
+                            else:
+                                total_str = f"{total_size/(1024*1024):.2f} MB"
+                            
+                            sys.stdout.write(f"\r{Colors.CYAN}🚢 Sailing{Colors.RESET} [{progress}] {int(100 * downloaded / total_size)}% | {size_str}/{total_str} | {speed_str}")
+                            sys.stdout.flush()
+                    
+                    # Clear the line after download completes
+                    sys.stdout.write("\r" + " " * 100 + "\r")
+                    sys.stdout.flush()
+                    logger.success(f"Successfully docked cargo at {dest_path}", animate=True)
         except urllib.error.URLError as e:
             logger.error(f"Failed to download {url}: {e}")
             sys.exit(1)
@@ -965,6 +1241,8 @@ int main(int argc, char* argv[]) {
             logger.error("No platform configurations found in pockage.json")
             sys.exit(1)
             
+        logger.build("Preparing to construct the vessel", animate=True)
+            
         # Determine which platform to build for
         target_platform = platform if platform else self.system
         
@@ -1266,6 +1544,8 @@ int main(int argc, char* argv[]) {
         if not self.config:
             logger.error("No pockage.json found. Run 'pockage new' first.")
             sys.exit(1)
+            
+        logger.run("Preparing to set sail with your application", animate=True)
 
         # Determine target platform
         target_platform = platform if platform else self.system
