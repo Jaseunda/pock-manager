@@ -11,6 +11,7 @@ import zipfile
 import tarfile
 import platform
 import concurrent.futures
+import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 import logging
@@ -1216,6 +1217,13 @@ int main(int argc, char* argv[]) {
                     shutil.copy("resources/appicon.png", resources_path / "appicon.png")
                     logger.info("Copied app icon to app bundle")
                 
+                # Get metadata from pockage.json
+                display_name = self.config.get("display_name", app_name)
+                bundle_identifier = self.config.get("bundle_identifier", f"com.pockage.{app_name}")
+                version = self.config.get("version", "1.0")
+                copyright_text = self.config.get("copyright", f"Copyright © {datetime.datetime.now().year}")
+                author = self.config.get("author", "")
+                
                 # Create Info.plist
                 info_plist_path = app_bundle_path / "Contents" / "Info.plist"
                 with open(info_plist_path, "w") as f:
@@ -1226,17 +1234,21 @@ int main(int argc, char* argv[]) {
     <key>CFBundleExecutable</key>
     <string>{app_name}</string>
     <key>CFBundleIdentifier</key>
-    <string>com.pockage.{app_name}</string>
+    <string>{bundle_identifier}</string>
     <key>CFBundleName</key>
-    <string>{app_name}</string>
+    <string>{display_name}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>{version}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>{version}</string>
     <key>CFBundleIconFile</key>
     <string>appicon</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>{copyright_text}</string>
 </dict>
 </plist>""")
                 
@@ -1326,6 +1338,13 @@ int main(int argc, char* argv[]) {
                     shutil.copy("resources/appicon.png", resources_path / "appicon.png")
                     logger.info("Copied app icon to app bundle")
                 
+                # Get metadata from pockage.json
+                display_name = self.config.get("display_name", app_name)
+                bundle_identifier = self.config.get("bundle_identifier", f"com.pockage.{app_name}")
+                version = self.config.get("version", "1.0")
+                copyright_text = self.config.get("copyright", f"Copyright © {datetime.datetime.now().year}")
+                author = self.config.get("author", "")
+                
                 # Create Info.plist if it doesn't exist
                 info_plist_path = app_bundle_path / "Contents" / "Info.plist"
                 if not info_plist_path.exists():
@@ -1337,17 +1356,21 @@ int main(int argc, char* argv[]) {
     <key>CFBundleExecutable</key>
     <string>{app_name}</string>
     <key>CFBundleIdentifier</key>
-    <string>com.pockage.{app_name}</string>
+    <string>{bundle_identifier}</string>
     <key>CFBundleName</key>
-    <string>{app_name}</string>
+    <string>{display_name}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>{version}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>{version}</string>
     <key>CFBundleIconFile</key>
     <string>appicon</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>{copyright_text}</string>
 </dict>
 </plist>""")
                 
