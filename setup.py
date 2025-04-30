@@ -12,6 +12,7 @@ setup(
     entry_points={
         "console_scripts": [
             "pockage=pockage.cli:main",
+            "poc=pockage.cli:main",
         ],
     },
     author="JASENUNDA",
@@ -32,4 +33,4 @@ setup(
         "Programming Language :: Python :: 3.11",
     ],
     python_requires=">=3.7",
-) 
+)

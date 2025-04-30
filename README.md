@@ -40,36 +40,48 @@ curl -L https://raw.githubusercontent.com/Jaseunda/pockage/main/install.bat -o i
 
 ## 📋 Command Reference
 
+> **Tip**: You can use `poc` as a shorter alias for `pockage` in all commands.
+
 ```bash
 # Create a new project
 pockage new [--template <template>] [-p <platforms>]
+# or: poc new [--template <template>] [-p <platforms>]
 
 # Install dependencies
 pockage install [library]
+# or: poc install [library]
 
 # Build project
 pockage build [--platform <platform>]
+# or: poc build [--platform <platform>]
 
 # Run project
 pockage run
+# or: poc run
 
 # Show package status
 pockage status
+# or: poc status
 
 # Scan for projects
 pockage scan [--scan-dir <directory>] [--scan-depth <depth>]
+# or: poc scan [--scan-dir <directory>] [--scan-depth <depth>]
 
 # Update libraries
 pockage update
+# or: poc update
 
 # Uninstall a library
 pockage uninstall <library>
+# or: poc uninstall <library>
 
 # Search for libraries
 pockage search <query>
+# or: poc search <query>
 
 # Show version
 pockage version
+# or: poc version
 ```
 
 ## 🤝 Contributing

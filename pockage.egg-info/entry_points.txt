@@ -1,3 +1,4 @@
 [console_scripts]
+poc = pockage.cli:main
 pockage = pockage.cli:main
 
