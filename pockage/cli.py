@@ -166,12 +166,23 @@ class PockageManager:
             logger.error(f"Failed to download {url}: {e}")
             sys.exit(1)
 
-    def new(self, template: Optional[str] = None):
+    def new(self, template: Optional[str] = None, platforms: Optional[List[str]] = None):
         """Create a new project template."""
         if Path("pockage.json").exists():
             logger.error("pockage.json already exists in this directory")
             sys.exit(1)
 
+        # Define available platforms
+        available_platforms = ["macos", "windows", "linux", "ios", "android"]
+        
+        # Validate platforms if specified
+        if platforms:
+            for platform in platforms:
+                if platform not in available_platforms:
+                    logger.error(f"Unknown platform: {platform}")
+                    logger.info(f"Available platforms: {', '.join(available_platforms)}")
+                    sys.exit(1)
+        
         template_config = {
             "name": Path.cwd().name,
             "version": "0.1.0",
@@ -181,7 +192,7 @@ class PockageManager:
             },
             "platforms": {
                 "macos": {
-                    "enabled": True,
+                    "enabled": True if not platforms else "macos" in platforms,
                     "build": {
                         "compiler": "clang++",
                         "cpp_version": "c++17",
@@ -193,7 +204,7 @@ class PockageManager:
                     }
                 },
                 "windows": {
-                    "enabled": False,
+                    "enabled": True if platforms and "windows" in platforms else False,
                     "build": {
                         "compiler": "g++",
                         "cpp_version": "c++17",
@@ -205,7 +216,7 @@ class PockageManager:
                     }
                 },
                 "linux": {
-                    "enabled": False,
+                    "enabled": True if platforms and "linux" in platforms else False,
                     "build": {
                         "compiler": "g++",
                         "cpp_version": "c++17",
@@ -217,7 +228,7 @@ class PockageManager:
                     }
                 },
                 "ios": {
-                    "enabled": False,
+                    "enabled": True if platforms and "ios" in platforms else False,
                     "build": {
                         "compiler": "clang++",
                         "cpp_version": "c++17",
@@ -229,7 +240,7 @@ class PockageManager:
                     }
                 },
                 "android": {
-                    "enabled": False,
+                    "enabled": True if platforms and "android" in platforms else False,
                     "build": {
                         "compiler": "clang++",
                         "cpp_version": "c++17",
@@ -267,12 +278,12 @@ int main() {
 
         logger.info("Project created successfully!")
 
-    def make(self, directory: str = "."):
+    def make(self, directory: str = ".", platforms: Optional[List[str]] = None):
         """Create a new project in the specified directory."""
         if directory != ".":
             Path(directory).mkdir(parents=True, exist_ok=True)
             os.chdir(directory)
-        self.new()
+        self.new(platforms=platforms)
 
     def install(self, library: Optional[str] = None):
         """Install specified library or all dependencies."""
@@ -503,10 +514,13 @@ def main():
     # New command
     new_parser = subparsers.add_parser("new", help="Create a new project")
     new_parser.add_argument("template", nargs="?", help="Project template to use")
+    new_parser.add_argument("-p", "--platforms", nargs="+", help="Enable specific platforms (macos, windows, linux, ios, android)")
+    
 
     # Make command
     make_parser = subparsers.add_parser("make", help="Create a new project in directory")
     make_parser.add_argument("directory", nargs="?", default=".", help="Directory to create project in")
+    make_parser.add_argument("-p", "--platforms", nargs="+", help="Enable specific platforms (macos, windows, linux, ios, android)")
 
     # Install command
     install_parser = subparsers.add_parser("install", help="Install dependencies")
@@ -551,9 +565,9 @@ def main():
     pockage = PockageManager()
 
     if args.command == "new":
-        pockage.new(args.template)
+        pockage.new(args.template, args.platforms)
     elif args.command == "make":
-        pockage.make(args.directory)
+        pockage.make(args.directory, args.platforms)
     elif args.command == "install":
         pockage.install(args.library)
     elif args.command == "uninstall":

@@ -41,6 +41,9 @@ cd myproject
 
 # Initialize project (like npm init)
 pockage new
+
+# Or create a project with specific platforms enabled
+pockage new -p macos windows linux
 ```
 
 ### Install Dependencies
@@ -143,6 +146,54 @@ Example format:
 ```
 
 ## 🔥 Advanced Features
+
+### Platform-Specific Build Configurations
+
+Pockage now supports platform-specific build configurations, allowing you to target multiple platforms from a single project:
+
+- **Automatic Platform Detection**: Automatically uses the correct configuration for your current platform
+- **Platform-Specific Output**: Builds are placed in platform-specific directories (e.g., `build/macos/`, `build/windows/`)
+- **Customizable Settings**: Each platform can have its own compiler, flags, and library paths
+- **Command-Line Selection**: Specify platforms when creating a new project with `pockage new -p macos ios android`
+
+Example `pockage.json` configuration:
+```json
+{
+  "platforms": {
+    "macos": {
+      "enabled": true,
+      "build": {
+        "compiler": "clang++",
+        "cpp_version": "c++17",
+        "output": "build/macos/myapp",
+        "include_paths": ["include", "libs/sdl2/SDL2.framework/Headers"],
+        "frameworks": ["SDL2"],
+        "framework_paths": ["libs/sdl2"]
+      }
+    },
+    "windows": {
+      "enabled": false,
+      "build": {
+        "compiler": "g++",
+        "cpp_version": "c++17",
+        "output": "build/windows/myapp.exe",
+        "include_paths": ["include", "libs/sdl2/include"],
+        "lib_paths": ["libs/sdl2/lib"],
+        "link_libraries": ["SDL2"]
+      }
+    }
+  }
+}
+```
+
+Supported platforms:
+- macOS (frameworks support)
+- Windows
+- Linux
+- iOS (with framework support)
+- Android (with shared library output)
+
+### Other Advanced Features
 
 - Auto unzip downloaded archives
 - Auto detect OS for correct binaries
