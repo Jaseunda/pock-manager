@@ -10,6 +10,10 @@
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/Jaseunda/pockage)
 
 > ⚠️ **Early Development**: Pockage is in its early stages. Expect breaking changes and limited features.
+>
+> 🧪 **Project Status**: Core functionality works, but templated applications might have issues. Projects created from scratch work fine.
+>
+> 🔧 **Contributions Welcome**: Feel free to submit pull requests for any issues you encounter.
 
 Pockage is a modern package manager for C/C++ projects, inspired by npm and cargo. Whether you're building games, applications, system software, or operating systems, Pockage makes dependency management simple and efficient.
 

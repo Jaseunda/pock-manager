@@ -223,8 +223,12 @@ class PockageManager:
         # Default template configuration
         template_config = {
             "name": Path.cwd().name,
+            "display_name": Path.cwd().name,
+            "bundle_identifier": f"com.example.{Path.cwd().name}",
             "version": "0.1.0",
             "description": "A new project built with Pockage!",
+            "author": "Your Name",
+            "copyright": f"Copyright © {datetime.datetime.now().year} Your Name",
             "platforms": {
                 "macos": {
                     "enabled": True if not platforms else "macos" in platforms,
