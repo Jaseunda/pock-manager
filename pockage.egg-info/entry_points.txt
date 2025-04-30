@@ -1,3 +1,2 @@
 [console_scripts]
 pockage = pockage.cli:main
-

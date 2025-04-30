@@ -1,12 +1,10 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: pockage
 Version: 0.1.0
 Summary: Simple Modern C++ Package Manager
 Home-page: https://github.com/Jaseunda/pockage
 Author: JASENUNDA
 Author-email: your.email@example.com
-License: UNKNOWN
-Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha
 Classifier: Intended Audience :: Developers
 Classifier: License :: Other/Proprietary License
@@ -19,6 +17,18 @@ Classifier: Programming Language :: Python :: 3.11
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: requests
+Requires-Dist: tqdm
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 # 📦 Pockage — The npm for C/C++
 
@@ -36,7 +46,7 @@ Pockage is a modern package manager for C/C++ projects, inspired by npm and carg
 - 🛠 One-command setup: Install C/C++ libraries without manual configuration
 - 📦 Dependency management: Like npm for JavaScript, but for C/C++
 - 🚀 Smart build system: Auto-detect sources, compile, and link
-- 📂 Cross-platform: Windows, macOS, Linux
+- 📂 Cross-platform: Windows, macOS, Linux, iOS, Android
 - 💬 Community-driven: Open source and welcoming to contributions
 - 📜 No vendor lock-in: All downloads from official sources
 - 🔒 MIT Licensed: Free for personal and commercial use
@@ -63,6 +73,9 @@ cd myproject
 
 # Initialize project (like npm init)
 pockage new
+
+# Or create a project with specific platforms enabled
+pockage new -p macos windows linux
 ```
 
 ### Install Dependencies
@@ -166,12 +179,100 @@ Example format:
 
 ## 🔥 Advanced Features
 
+### Platform-Specific Build Configurations
+
+Pockage now supports platform-specific build configurations, allowing you to target multiple platforms from a single project:
+
+- **Automatic Platform Detection**: Automatically uses the correct configuration for your current platform
+- **Platform-Specific Output**: Builds are placed in platform-specific directories (e.g., `build/macos/`, `build/windows/`)
+- **Customizable Settings**: Each platform can have its own compiler, flags, and library paths
+- **Command-Line Selection**: Specify platforms when creating a new project with `pockage new -p macos ios android`
+
+Example `pockage.json` configuration:
+```json
+{
+  "platforms": {
+    "macos": {
+      "enabled": true,
+      "build": {
+        "compiler": "clang++",
+        "cpp_version": "c++17",
+        "output": "build/macos/myapp",
+        "include_paths": ["include", "libs/sdl2/SDL2.framework/Headers"],
+        "frameworks": ["SDL2"],
+        "framework_paths": ["libs/sdl2"]
+      }
+    },
+    "windows": {
+      "enabled": false,
+      "build": {
+        "compiler": "g++",
+        "cpp_version": "c++17",
+        "output": "build/windows/myapp.exe",
+        "include_paths": ["include", "libs/sdl2/include"],
+        "lib_paths": ["libs/sdl2/lib"],
+        "link_libraries": ["SDL2"]
+      }
+    }
+  }
+}
+```
+
+Supported platforms:
+- macOS (frameworks support)
+- Windows
+- Linux
+- iOS (with framework support)
+- Android (with shared library output)
+
+### Other Advanced Features
+
 - Auto unzip downloaded archives
 - Auto detect OS for correct binaries
 - Auto manage compiler flags
 - Parallel building (multicore compilation)
 - Version locking for libraries
 - Smart error messages
+- Efficient package caching (like pnpm)
+  - Global package cache at `~/.pockage/cache`
+  - Symlinks to project directories
+  - No duplicate downloads
+  - Cache management tools
+
+### Cache Management
+
+Pockage uses a global cache system similar to pnpm, storing packages in `~/.pockage/cache`. This provides several benefits:
+
+- **Space Efficiency**: Each package version is stored only once
+- **Speed**: Fast installations using symlinks
+- **Consistency**: Same version used across projects
+
+#### Cache Commands
+
+```bash
+# List cached libraries and their sizes
+pockage cache list
+
+# Clean entire cache
+pockage cache clean
+
+# Clean specific library
+pockage cache clean sdl2
+
+# Clean specific version of a library
+pockage cache clean sdl2 2.28.5
+```
+
+#### Cache Configuration
+
+Configure cache settings in `~/.pockage/config.json`:
+
+```json
+{
+  "cache_dir": "~/.pockage/cache",
+  "max_cache_size": "10GB"
+}
+```
 
 ## 📜 License and Warranty
 
@@ -276,4 +377,3 @@ For support, please open an issue in the [GitHub repository](https://github.com/
 - [SDL2](https://www.libsdl.org/) for cross-platform development
 - [Dear ImGui](https://github.com/ocornut/imgui) for the GUI system
 - All other library authors and maintainers
-
