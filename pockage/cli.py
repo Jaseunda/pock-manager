@@ -397,14 +397,29 @@ int main() {
             logger.error("No pockage.json found. Run 'pockage new' first.")
             sys.exit(1)
 
-        build_config = self.config["build"]
+        if "platforms" not in self.config:
+            logger.error("No platform configurations found in pockage.json")
+            sys.exit(1)
+
+        # Get current platform configuration
+        platform_config = self.config["platforms"].get(self.system)
+        if not platform_config:
+            logger.error(f"No configuration found for platform: {self.system}")
+            sys.exit(1)
+
+        if not platform_config.get("enabled", False):
+            logger.error(f"Platform {self.system} is not enabled in configuration")
+            sys.exit(1)
+
+        build_config = platform_config["build"]
         compiler = build_config["compiler"]
         cpp_version = build_config["cpp_version"]
         output = build_config["output"]
         include_paths = build_config["include_paths"]
-        lib_paths = build_config["lib_paths"]
-        link_libraries = build_config["link_libraries"]
         build_flags = build_config["build_flags"]
+
+        # Create output directory
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
 
         # Find all source files
         source_files = []
@@ -415,17 +430,28 @@ int main() {
             logger.error("No source files found in src/ directory")
             sys.exit(1)
 
-        # Create build command
-        cmd = [
-            compiler,
-            f"-std={cpp_version}",
-            *[f"-I{path}" for path in include_paths],
-            *[f"-L{path}" for path in lib_paths],
-            *[f"-l{lib}" for lib in link_libraries],
+        # Platform-specific build command construction
+        cmd = [compiler, f"-std={cpp_version}", *[f"-I{path}" for path in include_paths]]
+
+        # Add framework paths and frameworks for macOS/iOS
+        if self.system in ["macos", "ios"]:
+            if "framework_paths" in build_config:
+                cmd.extend(f"-F{path}" for path in build_config["framework_paths"])
+            if "frameworks" in build_config:
+                cmd.extend(f"-framework {framework}" for framework in build_config["frameworks"])
+        else:
+            # Add library paths and libraries for other platforms
+            if "lib_paths" in build_config:
+                cmd.extend(f"-L{path}" for path in build_config["lib_paths"])
+            if "link_libraries" in build_config:
+                cmd.extend(f"-l{lib}" for lib in build_config["link_libraries"])
+
+        # Add build flags, source files and output
+        cmd.extend([
             build_flags,
             *source_files,
             "-o", output
-        ]
+        ])
 
         # Run build
         try:
