@@ -179,24 +179,70 @@ class PockageManager:
             "dependencies": {
                 "sdl2": "2.28.5"
             },
-            "build": {
-                "compiler": "g++",
-                "cpp_version": "c++17",
-                "output": f"build/{Path.cwd().name}",
-                "include_paths": [
-                    "include",
-                    "libs/sdl2/include"
-                ],
-                "lib_paths": [
-                    "libs/sdl2/lib"
-                ],
-                "link_libraries": [
-                    "SDL2"
-                ],
-                "build_flags": "-Wall -Wextra"
+            "platforms": {
+                "macos": {
+                    "enabled": True,
+                    "build": {
+                        "compiler": "clang++",
+                        "cpp_version": "c++17",
+                        "output": f"build/macos/{Path.cwd().name}",
+                        "include_paths": ["include", "libs/sdl2/SDL2.framework/Headers"],
+                        "frameworks": ["SDL2"],
+                        "framework_paths": ["libs/sdl2"],
+                        "build_flags": "-Wall -Wextra"
+                    }
+                },
+                "windows": {
+                    "enabled": False,
+                    "build": {
+                        "compiler": "g++",
+                        "cpp_version": "c++17",
+                        "output": f"build/windows/{Path.cwd().name}.exe",
+                        "include_paths": ["include", "libs/sdl2/include"],
+                        "lib_paths": ["libs/sdl2/lib"],
+                        "link_libraries": ["SDL2"],
+                        "build_flags": "-Wall -Wextra"
+                    }
+                },
+                "linux": {
+                    "enabled": False,
+                    "build": {
+                        "compiler": "g++",
+                        "cpp_version": "c++17",
+                        "output": f"build/linux/{Path.cwd().name}",
+                        "include_paths": ["include", "libs/sdl2/include"],
+                        "lib_paths": ["libs/sdl2/lib"],
+                        "link_libraries": ["SDL2"],
+                        "build_flags": "-Wall -Wextra"
+                    }
+                },
+                "ios": {
+                    "enabled": False,
+                    "build": {
+                        "compiler": "clang++",
+                        "cpp_version": "c++17",
+                        "output": f"build/ios/{Path.cwd().name}",
+                        "include_paths": ["include", "libs/sdl2/SDL2.framework/Headers"],
+                        "frameworks": ["SDL2"],
+                        "framework_paths": ["libs/sdl2"],
+                        "build_flags": "-Wall -Wextra -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path)"
+                    }
+                },
+                "android": {
+                    "enabled": False,
+                    "build": {
+                        "compiler": "clang++",
+                        "cpp_version": "c++17",
+                        "output": f"build/android/lib{Path.cwd().name}.so",
+                        "include_paths": ["include", "libs/sdl2/include"],
+                        "lib_paths": ["libs/sdl2/lib/${ANDROID_ABI}"],
+                        "link_libraries": ["SDL2"],
+                        "build_flags": "-Wall -Wextra -fPIC -shared"
+                    }
+                }
             },
             "run": {
-                "executable": f"build/{Path.cwd().name}"
+                "executable": f"build/{self.system}/{Path.cwd().name}"
             }
         }
 
@@ -509,4 +555,4 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    main() 
+    main()

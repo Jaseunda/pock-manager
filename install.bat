@@ -49,7 +49,7 @@ cd /d "%TEMP_DIR%"
 
 :: Download Pockage
 echo %GREEN%Downloading Pockage...%NC%
-curl -L -o pockage.zip https://github.com/yourusername/pockage/archive/refs/heads/main.zip
+curl -L -o pockage.zip https://github.com/Jaseunda/pockage/archive/refs/heads/main.zip
 
 :: Extract and install
 echo %GREEN%Installing...%NC%

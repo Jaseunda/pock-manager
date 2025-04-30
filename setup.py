@@ -19,7 +19,7 @@ setup(
     description="Simple Modern C++ Package Manager",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/pockage",
+    url="https://github.com/Jaseunda/pockage",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

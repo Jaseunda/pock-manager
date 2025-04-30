@@ -58,7 +58,7 @@ install_pockage() {
     
     # Download Pockage
     print_message "Downloading Pockage..."
-    curl -L https://github.com/yourusername/pockage/archive/refs/heads/main.zip -o pockage.zip
+    curl -L https://github.com/Jaseunda/pockage/archive/refs/heads/main.zip -o pockage.zip
     
     # Extract and install
     print_message "Installing..."
