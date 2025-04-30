@@ -1,10 +1,12 @@
-Metadata-Version: 2.4
+Metadata-Version: 2.1
 Name: pockage
 Version: 0.1.0
 Summary: Simple Modern C++ Package Manager
 Home-page: https://github.com/Jaseunda/pockage
 Author: JASENUNDA
 Author-email: your.email@example.com
+License: UNKNOWN
+Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha
 Classifier: Intended Audience :: Developers
 Classifier: License :: Other/Proprietary License
@@ -17,18 +19,6 @@ Classifier: Programming Language :: Python :: 3.11
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 License-File: LICENSE
-Requires-Dist: requests
-Requires-Dist: tqdm
-Dynamic: author
-Dynamic: author-email
-Dynamic: classifier
-Dynamic: description
-Dynamic: description-content-type
-Dynamic: home-page
-Dynamic: license-file
-Dynamic: requires-dist
-Dynamic: requires-python
-Dynamic: summary
 
 # 📦 Pockage — The npm for C/C++
 
@@ -377,3 +367,5 @@ For support, please open an issue in the [GitHub repository](https://github.com/
 - [SDL2](https://www.libsdl.org/) for cross-platform development
 - [Dear ImGui](https://github.com/ocornut/imgui) for the GUI system
 - All other library authors and maintainers
+
+

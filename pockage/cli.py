@@ -183,13 +183,11 @@ class PockageManager:
                     logger.info(f"Available platforms: {', '.join(available_platforms)}")
                     sys.exit(1)
         
+        # Default template configuration
         template_config = {
             "name": Path.cwd().name,
             "version": "0.1.0",
             "description": "A new project built with Pockage!",
-            "dependencies": {
-                "sdl2": "2.28.5"
-            },
             "platforms": {
                 "macos": {
                     "enabled": True if not platforms else "macos" in platforms,
@@ -197,9 +195,7 @@ class PockageManager:
                         "compiler": "clang++",
                         "cpp_version": "c++17",
                         "output": f"build/macos/{Path.cwd().name}",
-                        "include_paths": ["include", "libs/sdl2/SDL2.framework/Headers"],
-                        "frameworks": ["SDL2"],
-                        "framework_paths": ["libs/sdl2"],
+                        "include_paths": ["include"],
                         "build_flags": "-Wall -Wextra"
                     }
                 },
@@ -209,9 +205,7 @@ class PockageManager:
                         "compiler": "g++",
                         "cpp_version": "c++17",
                         "output": f"build/windows/{Path.cwd().name}.exe",
-                        "include_paths": ["include", "libs/sdl2/include"],
-                        "lib_paths": ["libs/sdl2/lib"],
-                        "link_libraries": ["SDL2"],
+                        "include_paths": ["include"],
                         "build_flags": "-Wall -Wextra"
                     }
                 },
@@ -221,9 +215,7 @@ class PockageManager:
                         "compiler": "g++",
                         "cpp_version": "c++17",
                         "output": f"build/linux/{Path.cwd().name}",
-                        "include_paths": ["include", "libs/sdl2/include"],
-                        "lib_paths": ["libs/sdl2/lib"],
-                        "link_libraries": ["SDL2"],
+                        "include_paths": ["include"],
                         "build_flags": "-Wall -Wextra"
                     }
                 },
@@ -233,9 +225,7 @@ class PockageManager:
                         "compiler": "clang++",
                         "cpp_version": "c++17",
                         "output": f"build/ios/{Path.cwd().name}",
-                        "include_paths": ["include", "libs/sdl2/SDL2.framework/Headers"],
-                        "frameworks": ["SDL2"],
-                        "framework_paths": ["libs/sdl2"],
+                        "include_paths": ["include"],
                         "build_flags": "-Wall -Wextra -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path)"
                     }
                 },
@@ -245,9 +235,7 @@ class PockageManager:
                         "compiler": "clang++",
                         "cpp_version": "c++17",
                         "output": f"build/android/lib{Path.cwd().name}.so",
-                        "include_paths": ["include", "libs/sdl2/include"],
-                        "lib_paths": ["libs/sdl2/lib/${ANDROID_ABI}"],
-                        "link_libraries": ["SDL2"],
+                        "include_paths": ["include"],
                         "build_flags": "-Wall -Wextra -fPIC -shared"
                     }
                 }
@@ -256,6 +244,85 @@ class PockageManager:
                 "executable": f"build/{self.system}/{Path.cwd().name}"
             }
         }
+        
+        # Handle different templates
+        if template == "hello-world" or template is None:
+            # Simple Hello World template (default)
+            main_cpp_content = """#include <iostream>
+
+int main() {
+    std::cout << "Hello, World!" << std::endl;
+    return 0;
+}
+"""
+            dependencies = {}
+        elif template == "sdl2":
+            # SDL2 template with dependencies
+            template_config["dependencies"] = {
+                "sdl2": "2.28.5"
+            }
+            
+            # Add SDL2 specific paths to all platforms
+            for platform in template_config["platforms"]:
+                if platform in ["macos", "ios"]:
+                    template_config["platforms"][platform]["build"]["include_paths"].append("libs/sdl2/SDL2.framework/Headers")
+                    template_config["platforms"][platform]["build"]["frameworks"] = ["SDL2"]
+                    template_config["platforms"][platform]["build"]["framework_paths"] = ["libs/sdl2"]
+                else:
+                    template_config["platforms"][platform]["build"]["include_paths"].append("libs/sdl2/include")
+                    template_config["platforms"][platform]["build"]["lib_paths"] = ["libs/sdl2/lib"]
+                    template_config["platforms"][platform]["build"]["link_libraries"] = ["SDL2"]
+            
+            main_cpp_content = """#include <SDL2/SDL.h>
+#include <iostream>
+
+int main(int argc, char* argv[]) {
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
+        return 1;
+    }
+    
+    SDL_Window* window = SDL_CreateWindow("Hello SDL2", 
+                                         SDL_WINDOWPOS_CENTERED, 
+                                         SDL_WINDOWPOS_CENTERED, 
+                                         640, 480, 
+                                         SDL_WINDOW_SHOWN);
+    if (window == nullptr) {
+        std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return 1;
+    }
+    
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (renderer == nullptr) {
+        std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+    
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+    
+    SDL_Delay(3000);  // Wait for 3 seconds
+    
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    
+    return 0;
+}
+"""
+            dependencies = {"sdl2": "2.28.5"}
+        else:
+            logger.error(f"Unknown template: {template}")
+            logger.info("Available templates: hello-world (default), sdl2")
+            sys.exit(1)
+            
+        # Add dependencies to config if any
+        if dependencies:
+            template_config["dependencies"] = dependencies
 
         # Create project structure
         Path("src").mkdir(exist_ok=True)
@@ -268,15 +335,9 @@ class PockageManager:
             json.dump(template_config, f, indent=2)
 
         with open("src/main.cpp", "w") as f:
-            f.write("""#include <iostream>
+            f.write(main_cpp_content)
 
-int main() {
-    std::cout << "Hello, Pockage!" << std::endl;
-    return 0;
-}
-""")
-
-        logger.info("Project created successfully!")
+        logger.info(f"Project created successfully with '{template if template else 'hello-world'}' template!")
 
     def make(self, directory: str = ".", platforms: Optional[List[str]] = None):
         """Create a new project in the specified directory."""
@@ -402,8 +463,8 @@ int main() {
         except pkg_resources.DistributionNotFound:
             print("Pockage version: development")
 
-    def build(self):
-        """Build the project."""
+    def build(self, platform: Optional[str] = None):
+        """Build the project for a specific platform or the current system platform."""
         if not self.config:
             logger.error("No pockage.json found. Run 'pockage new' first.")
             sys.exit(1)
@@ -411,15 +472,21 @@ int main() {
         if "platforms" not in self.config:
             logger.error("No platform configurations found in pockage.json")
             sys.exit(1)
-
-        # Get current platform configuration
-        platform_config = self.config["platforms"].get(self.system)
+            
+        # Determine which platform to build for
+        target_platform = platform if platform else self.system
+        
+        # Get platform configuration
+        platform_config = self.config["platforms"].get(target_platform)
         if not platform_config:
-            logger.error(f"No configuration found for platform: {self.system}")
+            logger.error(f"No configuration found for platform: {target_platform}")
+            available_platforms = list(self.config["platforms"].keys())
+            logger.info(f"Available platforms: {', '.join(available_platforms)}")
             sys.exit(1)
 
         if not platform_config.get("enabled", False):
-            logger.error(f"Platform {self.system} is not enabled in configuration")
+            logger.error(f"Platform {target_platform} is not enabled in configuration")
+            logger.info("Enable it in pockage.json by setting 'enabled': true for this platform")
             sys.exit(1)
 
         build_config = platform_config["build"]
@@ -445,7 +512,7 @@ int main() {
         cmd = [compiler, f"-std={cpp_version}", *[f"-I{path}" for path in include_paths]]
 
         # Add framework paths and frameworks for macOS/iOS
-        if self.system in ["macos", "ios"]:
+        if target_platform in ["macos", "ios"]:
             if "framework_paths" in build_config:
                 cmd.extend(f"-F{path}" for path in build_config["framework_paths"])
             if "frameworks" in build_config:
@@ -513,7 +580,7 @@ def main():
 
     # New command
     new_parser = subparsers.add_parser("new", help="Create a new project")
-    new_parser.add_argument("template", nargs="?", help="Project template to use")
+    new_parser.add_argument("template", nargs="?", help="Project template to use (hello-world, sdl2)")
     new_parser.add_argument("-p", "--platforms", nargs="+", help="Enable specific platforms (macos, windows, linux, ios, android)")
     
 
@@ -531,7 +598,9 @@ def main():
     uninstall_parser.add_argument("library", help="Library to remove")
 
     # Build command
-    subparsers.add_parser("build", help="Build the project")
+    build_parser = subparsers.add_parser("build", help="Build the project")
+    build_parser.add_argument("platform", nargs="?", help="Specific platform to build for (macos, windows, linux, ios, android)")
+    
 
     # Run command
     subparsers.add_parser("run", help="Run the project")
@@ -573,7 +642,7 @@ def main():
     elif args.command == "uninstall":
         pockage.uninstall(args.library)
     elif args.command == "build":
-        pockage.build()
+        pockage.build(args.platform)
     elif args.command == "run":
         pockage.run()
     elif args.command == "clean":

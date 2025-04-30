@@ -1,29 +1,70 @@
 {
-  "name": "mycoolgame",
+  "name": "pock-manager",
   "version": "0.1.0",
-  "description": "A cool game built with Pockage!",
-  "dependencies": {
-    "sdl2": "2.28.5",
-    "imgui": "1.89.9"
-  },
-  "build": {
-    "compiler": "g++",
-    "cpp_version": "c++17",
-    "output": "build/mycoolgame",
-    "include_paths": [
-      "include",
-      "libs/sdl2/include",
-      "libs/imgui/"
-    ],
-    "lib_paths": [
-      "libs/sdl2/lib"
-    ],
-    "link_libraries": [
-      "SDL2"
-    ],
-    "build_flags": "-Wall -Wextra"
+  "description": "A new project built with Pockage!",
+  "platforms": {
+    "macos": {
+      "enabled": true,
+      "build": {
+        "compiler": "clang++",
+        "cpp_version": "c++17",
+        "output": "build/macos/pock-manager",
+        "include_paths": [
+          "include"
+        ],
+        "build_flags": "-Wall -Wextra"
+      }
+    },
+    "windows": {
+      "enabled": false,
+      "build": {
+        "compiler": "g++",
+        "cpp_version": "c++17",
+        "output": "build/windows/pock-manager.exe",
+        "include_paths": [
+          "include"
+        ],
+        "build_flags": "-Wall -Wextra"
+      }
+    },
+    "linux": {
+      "enabled": true,
+      "build": {
+        "compiler": "g++",
+        "cpp_version": "c++17",
+        "output": "build/linux/pock-manager",
+        "include_paths": [
+          "include"
+        ],
+        "build_flags": "-Wall -Wextra"
+      }
+    },
+    "ios": {
+      "enabled": true,
+      "build": {
+        "compiler": "clang++",
+        "cpp_version": "c++17",
+        "output": "build/ios/pock-manager",
+        "include_paths": [
+          "include"
+        ],
+        "build_flags": "-Wall -Wextra -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path)"
+      }
+    },
+    "android": {
+      "enabled": false,
+      "build": {
+        "compiler": "clang++",
+        "cpp_version": "c++17",
+        "output": "build/android/libpock-manager.so",
+        "include_paths": [
+          "include"
+        ],
+        "build_flags": "-Wall -Wextra -fPIC -shared"
+      }
+    }
   },
   "run": {
-    "executable": "build/mycoolgame"
+    "executable": "build/darwin/pock-manager"
   }
-} 
+}
