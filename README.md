@@ -14,7 +14,7 @@ Pockage is a modern package manager for C/C++ projects, inspired by npm and carg
 - 🛠 One-command setup: Install C/C++ libraries without manual configuration
 - 📦 Dependency management: Like npm for JavaScript, but for C/C++
 - 🚀 Smart build system: Auto-detect sources, compile, and link
-- 📂 Cross-platform: Windows, macOS, Linux
+- 📂 Cross-platform: Windows, macOS, Linux, iOS, Android
 - 💬 Community-driven: Open source and welcoming to contributions
 - 📜 No vendor lock-in: All downloads from official sources
 - 🔒 MIT Licensed: Free for personal and commercial use
