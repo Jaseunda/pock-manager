@@ -561,30 +561,51 @@ int main() {
         return f"{size_bytes:.2f} PB"
 
 def main():
-    parser = argparse.ArgumentParser(description="Pockage - Simple C++ Package Manager & Build Tool")
-    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
+    parser = argparse.ArgumentParser(description="Pockage - The npm for C/C++")
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # Version command
+    version_parser = subparsers.add_parser("version", help="Show version information")
 
     # New command
     new_parser = subparsers.add_parser("new", help="Create a new project")
-    new_parser.add_argument("template", nargs="?", help="Project template to use")
+    new_parser.add_argument("template", nargs="?", help="Template to use (hello-world, gui, sdl2) or template@format (e.g., new@gui)")
+    new_parser.add_argument("-p", "--platforms", nargs="+", help="Platforms to enable (macos, windows, linux, ios, android)")
 
     # Make command
-    make_parser = subparsers.add_parser("make", help="Create a new project in directory")
-    make_parser.add_argument("directory", nargs="?", default=".", help="Directory to create project in")
+    make_parser = subparsers.add_parser("make", help="Create a new project in a directory")
+    make_parser.add_argument("directory", help="Directory to create the project in")
+    make_parser.add_argument("-p", "--platforms", nargs="+", help="Platforms to enable (macos, windows, linux, ios, android)")
 
     # Install command
     install_parser = subparsers.add_parser("install", help="Install dependencies")
-    install_parser.add_argument("library", nargs="?", help="Specific library to install")
+    install_parser.add_argument("library", nargs="?", help="Library to install")
 
     # Uninstall command
     uninstall_parser = subparsers.add_parser("uninstall", help="Remove a dependency")
-    uninstall_parser.add_argument("library", help="Library to remove")
+    uninstall_parser.add_argument("library", help="Library to uninstall")
+
+    # Info command
+    info_parser = subparsers.add_parser("info", help="Show project information")
+
+    # Search command
+    search_parser = subparsers.add_parser("search", help="Search for libraries")
+    search_parser.add_argument("query", help="Search query")
+
+    # Doctor command
+    doctor_parser = subparsers.add_parser("doctor", help="Check system setup")
+
+    # Config command
+    config_parser = subparsers.add_parser("config-set", help="Set configuration")
+    config_parser.add_argument("key", help="Configuration key")
+    config_parser.add_argument("value", help="Configuration value")
 
     # Build command
-    subparsers.add_parser("build", help="Build the project")
+    build_parser = subparsers.add_parser("build", help="Build the project")
+    build_parser.add_argument("platform", nargs="?", help="Platform to build for (macos, windows, linux, ios, android)")
 
     # Run command
-    subparsers.add_parser("run", help="Run the project")
+    run_parser = subparsers.add_parser("run", help="Run the project")
 
     # Clean command
     subparsers.add_parser("clean", help="Clean build artifacts")
@@ -592,44 +613,44 @@ def main():
     # Update command
     subparsers.add_parser("update", help="Update dependencies")
 
-    # Info command
-    subparsers.add_parser("info", help="Show project information")
-
-    # Search command
-    search_parser = subparsers.add_parser("search", help="Search for libraries")
-    search_parser.add_argument("query", help="Search query")
-
-    # Doctor command
-    subparsers.add_parser("doctor", help="Check system setup")
-
-    # Config command
-    config_parser = subparsers.add_parser("config", help="Set configuration")
-    config_parser.add_argument("action", choices=["set"])
-    config_parser.add_argument("key", help="Configuration key")
-    config_parser.add_argument("value", help="Configuration value")
-
-    # Version command
-    subparsers.add_parser("version", help="Show Pockage version")
-
     # Cache command
     cache_parser = subparsers.add_parser("cache", help="Cache management")
     cache_parser.add_argument("action", choices=["list", "clean"])
     cache_parser.add_argument("library", nargs="?", help="Library to manage")
     cache_parser.add_argument("version", nargs="?", help="Version to manage")
 
-    args = parser.parse_args()
+    # Handle special command formats like new@gui
+    argv = sys.argv[1:]
+    special_command = None
+    
+    if len(argv) > 0 and '@' in argv[0] and not argv[0].startswith('-'):
+        parts = argv[0].split('@')
+        if len(parts) == 2:
+            if parts[0] in ["new", "make"]:
+                # Replace new@gui with new gui
+                argv[0] = parts[0]
+                argv.insert(1, parts[1])
+                special_command = True
+    
+    if special_command:
+        args = parser.parse_args(argv)
+    else:
+        args = parser.parse_args()
+
     pockage = PockageManager()
 
-    if args.command == "new":
-        pockage.new(args.template)
+    if args.command == "version":
+        pockage.version()
+    elif args.command == "new":
+        pockage.new(args.template, args.platforms)
     elif args.command == "make":
-        pockage.make(args.directory)
+        pockage.make(args.directory, args.platforms)
     elif args.command == "install":
         pockage.install(args.library)
     elif args.command == "uninstall":
         pockage.uninstall(args.library)
     elif args.command == "build":
-        pockage.build()
+        pockage.build(args.platform if 'platform' in args else None)
     elif args.command == "run":
         pockage.run()
     elif args.command == "clean":
@@ -642,11 +663,8 @@ def main():
         pockage.search(args.query)
     elif args.command == "doctor":
         pockage.doctor()
-    elif args.command == "config":
-        if args.action == "set":
-            pockage.config_set(args.key, args.value)
-    elif args.command == "version":
-        pockage.version()
+    elif args.command == "config-set":
+        pockage.config_set(args.key, args.value)
     elif args.command == "cache":
         if args.action == "list":
             pockage.cache_list()
@@ -656,4 +674,4 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    main() 
+    main()

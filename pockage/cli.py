@@ -21,10 +21,10 @@ import glob
 import pkg_resources
 import tqdm
 
-# Configure logging
+# Configure logging with Pockage branding (cargo ship + box emojis)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - 🚢📦 %(message)s'
 )
 logger = logging.getLogger('pockage')
 
@@ -144,6 +144,28 @@ class PockageManager:
         try:
             self._download_file(url, temp_file.name)
             extract_func(temp_file.name, str(lib_dir))
+            
+            # Special handling for ImGui which extracts to a versioned subfolder
+            if library == "imgui":
+                # Find the extracted imgui directory (usually named imgui-x.xx.x)
+                imgui_dirs = [d for d in lib_dir.iterdir() if d.is_dir() and d.name.startswith("imgui-")]
+                if imgui_dirs:
+                    imgui_src_dir = imgui_dirs[0]
+                    # Copy all header files to the main imgui directory
+                    for file in imgui_src_dir.glob("*.h"):
+                        shutil.copy(file, lib_dir)
+                    for file in imgui_src_dir.glob("*.cpp"):
+                        shutil.copy(file, lib_dir)
+                    # Create backends directory if it doesn't exist
+                    backends_dir = lib_dir / "backends"
+                    backends_dir.mkdir(exist_ok=True)
+                    # Copy backend files if they exist
+                    src_backends_dir = imgui_src_dir / "backends"
+                    if src_backends_dir.exists():
+                        for file in src_backends_dir.glob("*"):
+                            if file.is_file():
+                                shutil.copy(file, backends_dir)
+            
             logger.info(f"Installed {library} {version}")
         finally:
             os.unlink(temp_file.name)
@@ -166,11 +188,25 @@ class PockageManager:
             logger.error(f"Failed to download {url}: {e}")
             sys.exit(1)
 
-    def new(self, template: Optional[str] = None, platforms: Optional[List[str]] = None):
-        """Create a new project template."""
+    def new(self, template_arg: Optional[str] = None, platforms: Optional[List[str]] = None):
+        """Create a new project template.
+        
+        Args:
+            template_arg: Template name or template@format (e.g., 'gui' or 'new@gui')
+            platforms: List of platforms to enable
+        """
         if Path("pockage.json").exists():
             logger.error("pockage.json already exists in this directory")
             sys.exit(1)
+            
+        # Parse template argument if it contains '@' format
+        template = None
+        if template_arg:
+            if '@' in template_arg:
+                # Extract template name after '@'
+                template = template_arg.split('@')[1]
+            else:
+                template = template_arg
 
         # Define available platforms
         available_platforms = ["macos", "windows", "linux", "ios", "android"]
@@ -256,6 +292,172 @@ int main() {
 }
 """
             dependencies = {}
+        elif template == "gui":
+            # GUI Hello World template with ImGui and SDL2
+            template_config["dependencies"] = {
+                "sdl2": "2.28.5",
+                "imgui": "1.89.9"
+            }
+            
+            # Add SDL2 and ImGui specific paths to all platforms
+            for platform in template_config["platforms"]:
+                if platform in ["macos", "ios"]:
+                    template_config["platforms"][platform]["build"]["include_paths"].extend([
+                        "libs/sdl2/SDL2.framework/Headers",
+                        "libs/imgui",
+                        "libs/imgui/backends"
+                    ])
+                    template_config["platforms"][platform]["build"]["frameworks"] = ["SDL2"]
+                    template_config["platforms"][platform]["build"]["framework_paths"] = ["libs/sdl2"]
+                else:
+                    template_config["platforms"][platform]["build"]["include_paths"].extend([
+                        "libs/sdl2/include",
+                        "libs/imgui",
+                        "libs/imgui/backends"
+                    ])
+                    template_config["platforms"][platform]["build"]["lib_paths"] = ["libs/sdl2/lib"]
+                    template_config["platforms"][platform]["build"]["link_libraries"] = ["SDL2"]
+            
+            main_cpp_content = """#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_sdlrenderer2.h"
+#include <SDL2/SDL.h>
+#include <iostream>
+
+int main(int argc, char* argv[]) {
+    // Setup SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+        std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
+        return 1;
+    }
+
+    // Create window with SDL_Renderer
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    SDL_Window* window = SDL_CreateWindow("Hello Pockage GUI", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, window_flags);
+    if (window == nullptr) {
+        std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return 1;
+    }
+    
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+    if (renderer == nullptr) {
+        std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+    ImGui_ImplSDLRenderer2_Init(renderer);
+
+    // Main loop
+    bool done = false;
+    while (!done) {
+        // Poll and handle events
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT)
+                done = true;
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+                done = true;
+        }
+
+        // Start the Dear ImGui frame
+        ImGui_ImplSDLRenderer2_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+        // Create a window with a greeting
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Hello, World!");
+        ImGui::Text("Welcome to Pockage GUI template!");
+        ImGui::Separator();
+        ImGui::Text("This is a simple ImGui application.");
+        
+        static float color[3] = { 0.2f, 0.3f, 0.8f };
+        ImGui::ColorEdit3("Background Color", color);
+        
+        if (ImGui::Button("Click Me!")) {
+            // Button action
+            std::cout << "Button clicked!" << std::endl;
+        }
+        
+        ImGui::End();
+
+        // Rendering
+        ImGui::Render();
+        SDL_SetRenderDrawColor(renderer, (Uint8)(color[0] * 255), (Uint8)(color[1] * 255), (Uint8)(color[2] * 255), 255);
+        SDL_RenderClear(renderer);
+        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+        SDL_RenderPresent(renderer);
+    }
+
+    // Cleanup
+    ImGui_ImplSDLRenderer2_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
+    return 0;
+}
+"""
+            dependencies = {"sdl2": "2.28.5", "imgui": "1.89.9"}
+            
+            # Create additional files needed for ImGui
+            Path("include/imgui").mkdir(exist_ok=True, parents=True)
+            Path("resources").mkdir(exist_ok=True, parents=True)
+            
+            # Copy ImGui backend files from templates
+            template_dir = Path(__file__).parent / "templates"
+            
+            # Copy ImGui backend headers
+            with open(template_dir / "imgui_impl_sdl2.h", "r") as f:
+                imgui_sdl2_content = f.read()
+            with open("include/imgui/imgui_impl_sdl2.h", "w") as f:
+                f.write(imgui_sdl2_content)
+                
+            with open(template_dir / "imgui_impl_sdlrenderer2.h", "r") as f:
+                imgui_sdlrenderer2_content = f.read()
+            with open("include/imgui/imgui_impl_sdlrenderer2.h", "w") as f:
+                f.write(imgui_sdlrenderer2_content)
+            
+            # Copy app icon set for macOS/iOS bundles
+            assets_dir = Path(__file__).parent.parent / "assets"
+            appicon_set = assets_dir / "AppIcon.appiconset"
+            if appicon_set.exists():
+                resources_appicon_set = Path("resources/AppIcon.appiconset")
+                resources_appicon_set.mkdir(parents=True, exist_ok=True)
+                
+                # Copy all files from AppIcon.appiconset
+                for icon_file in appicon_set.glob("*"):
+                    if icon_file.is_file():
+                        shutil.copy(icon_file, resources_appicon_set / icon_file.name)
+                logger.info("Copied AppIcon.appiconset to resources/")
+            
+            # Also copy the single app logo for backward compatibility
+            if (assets_dir / "applogo.png").exists():
+                shutil.copy(assets_dir / "applogo.png", "resources/appicon.png")
+                logger.info("Copied app icon to resources/")
+                
+            logger.info("Created ImGui backend files in include/imgui/")
+            
         elif template == "sdl2":
             # SDL2 template with dependencies
             template_config["dependencies"] = {
@@ -317,7 +519,7 @@ int main(int argc, char* argv[]) {
             dependencies = {"sdl2": "2.28.5"}
         else:
             logger.error(f"Unknown template: {template}")
-            logger.info("Available templates: hello-world (default), sdl2")
+            logger.info("Available templates: hello-world (default), gui, sdl2")
             sys.exit(1)
             
         # Add dependencies to config if any
@@ -338,13 +540,25 @@ int main(int argc, char* argv[]) {
             f.write(main_cpp_content)
 
         logger.info(f"Project created successfully with '{template if template else 'hello-world'}' template!")
+        
+        # Automatically install dependencies if any
+        if dependencies:
+            logger.info("Installing dependencies...")
+            # Reload the config since we just created pockage.json
+            self.config = self._load_config()
+            self.install()
 
     def make(self, directory: str = ".", platforms: Optional[List[str]] = None):
-        """Create a new project in the specified directory."""
+        """Create a new project in the specified directory and install dependencies."""
         if directory != ".":
             Path(directory).mkdir(parents=True, exist_ok=True)
             os.chdir(directory)
         self.new(platforms=platforms)
+        
+        # Automatically install dependencies if any
+        if self.config and "dependencies" in self.config and self.config["dependencies"]:
+            logger.info("Installing dependencies...")
+            self.install()
 
     def install(self, library: Optional[str] = None):
         """Install specified library or all dependencies."""
@@ -504,6 +718,48 @@ int main(int argc, char* argv[]) {
         for ext in ["cpp", "cxx", "cc", "c"]:
             source_files.extend(glob.glob(f"src/**/*.{ext}", recursive=True))
 
+        # Add ImGui implementation files if they exist
+        if "dependencies" in self.config and "imgui" in self.config["dependencies"]:
+            imgui_dir = Path("libs/imgui")
+            if imgui_dir.exists():
+                # Add ImGui core implementation files
+                imgui_cpp = imgui_dir / "imgui.cpp"
+                if imgui_cpp.exists():
+                    source_files.append(str(imgui_cpp))
+                
+                # Add other ImGui core files
+                for impl_file in imgui_dir.glob("imgui_*.cpp"):
+                    source_files.append(str(impl_file))
+                
+                # Add SDL2 backend implementation files
+                sdl_impl = imgui_dir / "backends/imgui_impl_sdl2.cpp"
+                if sdl_impl.exists():
+                    source_files.append(str(sdl_impl))
+                
+                sdl_renderer_impl = imgui_dir / "backends/imgui_impl_sdlrenderer2.cpp"
+                if sdl_renderer_impl.exists():
+                    source_files.append(str(sdl_renderer_impl))
+                
+                # If backend files don't exist in libs, check include directory
+                if not sdl_impl.exists() or not sdl_renderer_impl.exists():
+                    include_dir = Path("include/imgui")
+                    
+                    # Create implementation files in include directory if they don't exist
+                    if include_dir.exists():
+                        # Create imgui_impl_sdl2.cpp if it doesn't exist
+                        sdl_impl_cpp = include_dir / "imgui_impl_sdl2.cpp"
+                        if not sdl_impl_cpp.exists() and (include_dir / "imgui_impl_sdl2.h").exists():
+                            with open(sdl_impl_cpp, "w") as f:
+                                f.write("#include \"imgui_impl_sdl2.h\"\n#include \"imgui.h\"\n#include <SDL2/SDL.h>\n\n// SDL2 implementation from imgui_impl_sdl2.cpp\n#define IMGUI_IMPL_SDL2_IMPL\n#include \"imgui_impl_sdl2.h\"\n")
+                            source_files.append(str(sdl_impl_cpp))
+                        
+                        # Create imgui_impl_sdlrenderer2.cpp if it doesn't exist
+                        sdl_renderer_impl_cpp = include_dir / "imgui_impl_sdlrenderer2.cpp"
+                        if not sdl_renderer_impl_cpp.exists() and (include_dir / "imgui_impl_sdlrenderer2.h").exists():
+                            with open(sdl_renderer_impl_cpp, "w") as f:
+                                f.write("#include \"imgui_impl_sdlrenderer2.h\"\n#include \"imgui.h\"\n#include <SDL2/SDL.h>\n\n// SDL2 renderer implementation from imgui_impl_sdlrenderer2.cpp\n#define IMGUI_IMPL_SDL2_RENDERER_IMPL\n#include \"imgui_impl_sdlrenderer2.h\"\n")
+                            source_files.append(str(sdl_renderer_impl_cpp))
+
         if not source_files:
             logger.error("No source files found in src/ directory")
             sys.exit(1)
@@ -514,9 +770,15 @@ int main(int argc, char* argv[]) {
         # Add framework paths and frameworks for macOS/iOS
         if target_platform in ["macos", "ios"]:
             if "framework_paths" in build_config:
-                cmd.extend(f"-F{path}" for path in build_config["framework_paths"])
+                for path in build_config["framework_paths"]:
+                    cmd.append(f"-F{path}")
+                    # Add rpath to ensure frameworks can be found at runtime
+                    cmd.append(f"-Wl,-rpath,{path}")
             if "frameworks" in build_config:
-                cmd.extend(f"-framework {framework}" for framework in build_config["frameworks"])
+                # Add each framework as separate arguments
+                for framework in build_config["frameworks"]:
+                    cmd.append("-framework")
+                    cmd.append(framework)
         else:
             # Add library paths and libraries for other platforms
             if "lib_paths" in build_config:
@@ -524,9 +786,10 @@ int main(int argc, char* argv[]) {
             if "link_libraries" in build_config:
                 cmd.extend(f"-l{lib}" for lib in build_config["link_libraries"])
 
-        # Add build flags, source files and output
+        # Add build flags (split them to avoid warning), source files and output
+        if build_flags:
+            cmd.extend(build_flags.split())
         cmd.extend([
-            build_flags,
             *source_files,
             "-o", output
         ])
@@ -535,23 +798,156 @@ int main(int argc, char* argv[]) {
         try:
             subprocess.run(cmd, check=True)
             logger.info(f"Build successful: {output}")
+            
+            # For macOS GUI applications with SDL2, create a proper app bundle
+            if target_platform == "macos" and "dependencies" in self.config and "sdl2" in self.config["dependencies"]:
+                app_name = Path(output).name
+                app_bundle_path = Path(output).parent / f"{app_name}.app"
+                frameworks_path = app_bundle_path / "Contents" / "Frameworks"
+                macos_path = app_bundle_path / "Contents" / "MacOS"
+                resources_path = app_bundle_path / "Contents" / "Resources"
+                
+                # Create directory structure
+                frameworks_path.mkdir(parents=True, exist_ok=True)
+                macos_path.mkdir(parents=True, exist_ok=True)
+                resources_path.mkdir(parents=True, exist_ok=True)
+                
+                # Copy executable to app bundle
+                executable_in_bundle = macos_path / app_name
+                shutil.copy2(output, executable_in_bundle)
+                
+                # Copy SDL2.framework to app bundle
+                sdl2_framework_path = Path("libs/sdl2/SDL2.framework")
+                if sdl2_framework_path.exists():
+                    bundle_framework_path = frameworks_path / "SDL2.framework"
+                    if not bundle_framework_path.exists():
+                        logger.info(f"Copying SDL2.framework to {bundle_framework_path}")
+                        shutil.copytree(sdl2_framework_path, bundle_framework_path)
+                    
+                    # Fix executable's RPATH to look for frameworks in @executable_path/../Frameworks
+                    try:
+                        logger.info("Setting RPATH for the executable")
+                        subprocess.run(["install_name_tool", "-add_rpath", "@executable_path/../Frameworks", str(executable_in_bundle)], check=True)
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(f"Failed to set RPATH: {e}")
+                        logger.info("You may need to manually set the RPATH using: install_name_tool -add_rpath @executable_path/../Frameworks <executable>")
+                
+                # Copy app icons if available
+                appicon_set = Path("resources/AppIcon.appiconset")
+                if appicon_set.exists():
+                    # Copy all icon files to Resources directory
+                    for icon_file in appicon_set.glob("*"):
+                        if icon_file.is_file() and icon_file.name != "Contents.json":
+                            shutil.copy(icon_file, resources_path / icon_file.name)
+                    logger.info("Copied app icons to app bundle")
+                elif Path("resources/appicon.png").exists():
+                    # Use single icon file as fallback
+                    shutil.copy("resources/appicon.png", resources_path / "appicon.png")
+                    logger.info("Copied app icon to app bundle")
+                
+                # Create Info.plist
+                info_plist_path = app_bundle_path / "Contents" / "Info.plist"
+                with open(info_plist_path, "w") as f:
+                    f.write(f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>{app_name}</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.pockage.{app_name}</string>
+    <key>CFBundleName</key>
+    <string>{app_name}</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleIconFile</key>
+    <string>appicon</string>
+</dict>
+</plist>""")
+                
+                logger.info(f"Created macOS app bundle: {app_bundle_path}")
         except subprocess.CalledProcessError as e:
             logger.error(f"Build failed: {e}")
             sys.exit(1)
 
-    def run(self):
+    def run(self, platform: Optional[str] = None):
         """Run the project."""
         if not self.config:
             logger.error("No pockage.json found. Run 'pockage new' first.")
             sys.exit(1)
 
-        executable = self.config["run"]["executable"]
-        if not Path(executable).exists():
-            logger.error(f"Executable not found: {executable}")
+        # Determine target platform
+        target_platform = platform if platform else self.system
+        
+        # Check if the platform is enabled
+        if target_platform not in self.config["platforms"]:
+            logger.error(f"Platform '{target_platform}' not found in pockage.json")
+            available_platforms = [p for p in self.config["platforms"] if self.config["platforms"][p]["enabled"]]
+            logger.info(f"Available platforms: {', '.join(available_platforms)}")
+            sys.exit(1)
+            
+        if not self.config["platforms"][target_platform]["enabled"]:
+            logger.error(f"Platform '{target_platform}' is disabled in pockage.json")
+            available_platforms = [p for p in self.config["platforms"] if self.config["platforms"][p]["enabled"]]
+            logger.info(f"Available platforms: {', '.join(available_platforms)}")
             sys.exit(1)
 
+        # Get executable path
+        if "run" in self.config and "executable" in self.config["run"]:
+            executable = self.config["run"]["executable"]
+        else:
+            executable = self.config["platforms"][target_platform]["build"]["output"]
+
+        # Check if executable exists
+        if not Path(executable).exists():
+            logger.error(f"Executable not found: {executable}")
+            logger.info("Run 'pockage build' first.")
+            sys.exit(1)
+
+        # Special handling for macOS to ensure frameworks are properly loaded
+        if target_platform == "macos" and "dependencies" in self.config and "sdl2" in self.config["dependencies"]:
+            # Create a proper app bundle structure if it doesn't exist
+            app_name = Path(executable).name
+            app_bundle_path = Path(executable).parent / f"{app_name}.app"
+            frameworks_path = app_bundle_path / "Contents" / "Frameworks"
+            macos_path = app_bundle_path / "Contents" / "MacOS"
+            
+            # Create directory structure
+            frameworks_path.mkdir(parents=True, exist_ok=True)
+            macos_path.mkdir(parents=True, exist_ok=True)
+            
+            # Copy executable to app bundle
+            executable_in_bundle = macos_path / app_name
+            shutil.copy2(executable, executable_in_bundle)
+            
+            # Copy SDL2.framework to app bundle
+            sdl2_framework_path = Path("libs/sdl2/SDL2.framework")
+            if sdl2_framework_path.exists():
+                bundle_framework_path = frameworks_path / "SDL2.framework"
+                if not bundle_framework_path.exists():
+                    logger.info(f"Copying SDL2.framework to {bundle_framework_path}")
+                    shutil.copytree(sdl2_framework_path, bundle_framework_path)
+                
+                # Fix executable's RPATH to look for frameworks in @executable_path/../Frameworks
+                try:
+                    logger.info("Setting RPATH for the executable")
+                    subprocess.run(["install_name_tool", "-add_rpath", "@executable_path/../Frameworks", str(executable_in_bundle)], check=True)
+                except subprocess.CalledProcessError as e:
+                    logger.warning(f"Failed to set RPATH: {e}")
+                    logger.info("You may need to manually set the RPATH using: install_name_tool -add_rpath @executable_path/../Frameworks <executable>")
+                
+                # Update executable to use
+                executable = str(executable_in_bundle)
+                logger.info(f"Running from app bundle: {executable}")
+
+        # Run executable
         try:
-            subprocess.run([executable], check=True)
+            logger.info(f"Running {executable}...")
+            subprocess.run([executable])
         except subprocess.CalledProcessError as e:
             logger.error(f"Run failed: {e}")
             sys.exit(1)
@@ -575,12 +971,25 @@ int main(int argc, char* argv[]) {
         logger.info("All dependencies updated")
 
 def main():
+    # Handle special command formats like new@gui
+    argv = sys.argv[1:]
+    special_command = None
+    
+    if len(argv) > 0 and '@' in argv[0] and not argv[0].startswith('-'):
+        parts = argv[0].split('@')
+        if len(parts) == 2:
+            if parts[0] in ["new", "make"]:
+                # Replace new@gui with new gui
+                argv[0] = parts[0]
+                argv.insert(1, parts[1])
+                special_command = True
+    
     parser = argparse.ArgumentParser(description="Pockage - Simple C++ Package Manager & Build Tool")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # New command
     new_parser = subparsers.add_parser("new", help="Create a new project")
-    new_parser.add_argument("template", nargs="?", help="Project template to use (hello-world, sdl2)")
+    new_parser.add_argument("template", nargs="?", help="Project template to use (hello-world, gui, sdl2) or template@format (e.g., new@gui)")
     new_parser.add_argument("-p", "--platforms", nargs="+", help="Enable specific platforms (macos, windows, linux, ios, android)")
     
 
@@ -630,7 +1039,11 @@ def main():
     # Version command
     subparsers.add_parser("version", help="Show Pockage version")
 
-    args = parser.parse_args()
+    if special_command:
+        args = parser.parse_args(argv)
+    else:
+        args = parser.parse_args()
+        
     pockage = PockageManager()
 
     if args.command == "new":

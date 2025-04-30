@@ -1,4 +1,8 @@
-# 📦 Pockage — The npm for C/C++
+<p align="center">
+  <img src="assets/logo.png" alt="Pockage Logo" width="200">
+</p>
+
+# 🚢📦 Pockage — The npm for C/C++
 
 [![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
