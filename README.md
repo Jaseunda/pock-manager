@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Pockage Logo" width="200">
+  <img src="assets/banner.png" alt="Pockage Banner" width="100%">
 </p>
 
 # 🚢📦 Pockage — The npm for C/C++
